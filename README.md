@@ -3,4 +3,4 @@ Progetto finale di elaborazione dati tridimensionali - UNIPD - 2015-2016
 
 Camillo è un boia <------------ stocazzzo 
 
-mo si incazza
+metti a posto
