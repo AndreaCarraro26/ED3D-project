@@ -25,17 +25,17 @@
 @brief basic function to produce an OpenGL projection matrix and associated viewport parameters
 which match a given set of camera intrinsics. This is currently written for the Eigen linear
 algebra library, however it should be straightforward to port to any 4x4 matrix class.
-@param[out] frustum Eigen::Matrix4d projection matrix.  Eigen stores these matrices in column-major (i.e. OpenGL) order.
+@param[out] frustum Eigen::Matrix4d projection matrix.Â  Eigen stores these matrices in column-major (i.e. OpenGL) order.
 @param[out] viewport 4-component OpenGL viewport values, as might be retrieved by glGetIntegerv( GL_VIEWPORT, &viewport[0] )
-@param[in]  alpha x-axis focal length, from camera intrinsic matrix
-@param[in]  alpha y-axis focal length, from camera intrinsic matrix
-@param[in]  skew  x and y axis skew, from camera intrinsic matrix
-@param[in]  u0 image origin x-coordinate, from camera intrinsic matrix
-@param[in]  v0 image origin y-coordinate, from camera intrinsic matrix
-@param[in]  img_width image width, in pixels
-@param[in]  img_height image height, in pixels
-@param[in]  near_clip near clipping plane z-location, can be set arbitrarily > 0, controls the mapping of z-coordinates for OpenGL
-@param[in]  far_clip  far clipping plane z-location, can be set arbitrarily > near_clip, controls the mapping of z-coordinate for OpenGL
+@param[in]Â  alpha x-axis focal length, from camera intrinsic matrix
+@param[in]Â  alpha y-axis focal length, from camera intrinsic matrix
+@param[in]Â  skewÂ  x and y axis skew, from camera intrinsic matrix
+@param[in]Â  u0 image origin x-coordinate, from camera intrinsic matrix
+@param[in]Â  v0 image origin y-coordinate, from camera intrinsic matrix
+@param[in]Â  img_width image width, in pixels
+@param[in]Â  img_height image height, in pixels
+@param[in]Â  near_clip near clipping plane z-location, can be set arbitrarily > 0, controls the mapping of z-coordinates for OpenGL
+@param[in]Â  far_clipÂ  far clipping plane z-location, can be set arbitrarily > near_clip, controls the mapping of z-coordinate for OpenGL
 */ 
 
 //void build_opengl_projection_for_intrinsics(Eigen::Matrix4d &frustum, int *viewport, double alpha, double beta, double skew, double u0, double v0, int img_width, int img_height, double near_clip, double far_clip) {
@@ -60,7 +60,7 @@ algebra library, however it should be straightforward to port to any 4x4 matrix 
 //
 //	 construct an orthographic matrix which maps from projected
 //	 coordinates to normalized device coordinates in the range
-//	 [-1, 1].  OpenGL then maps coordinates in NDC to the current
+//	 [-1, 1].Â  OpenGL then maps coordinates in NDC to the current
 //	 viewport
 //	Eigen::Matrix4d ortho = Eigen::Matrix4d::Zero();
 //	ortho(0, 0) = 2.0 / (R - L); ortho(0, 3) = -(R + L) / (R - L);
@@ -104,7 +104,7 @@ void intrinsic2projection(osg::Matrixd &frustum, double alpha, double beta, doub
 
 	// construct an orthographic matrix which maps from projected
 	// coordinates to normalized device coordinates in the range
-	// [-1, 1].  OpenGL then maps coordinates in NDC to the current
+	// [-1, 1].Â  OpenGL then maps coordinates in NDC to the current
 	// viewport
 	osg::Matrixd ortho; 
 	ortho(0, 0) = 2.0 / (R - L); ortho(0, 3) = -(R + L) / (R - L);
@@ -163,24 +163,33 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 
 int main(int, char **)
 {
-	int cameraX = 0;
-	int cameraY = 0;
-	int cameraZ = 1800;
-	int laserLength = 3000;
-	int	laserDistance = 500; // Da 500 a 800mm
+	std::string confFile = "../data/Configuration.xml";
+	cv::FileStorage fs;
+	fs.open(confFile, cv::FileStorage::READ);
 
-	int numLaser = 700;		// numero di linee che compongono il fascio
-	int scanSpeed;	//  Valori 100 mm/s – 1000 mm/s
-	int fpsCam;		// Valori 100 fps – 500 fps
-	double alphaLaser = 70;	// Valori 60° - 70°
-	double fanLaser = 45;		// Valori 30° - 45°
-	
-	double minAngle = fanLaser / numLaser;
+	int cameraX = 0;	// Posizione X e Y del setting non modificabili 
+	int cameraY = 0;	// nel file di configurazione
+	int cameraZ;		fs["cameraHeight"] >> cameraZ;
+	int laserLength;	fs["laserLength"] >> laserLength;
+	int	laserDistance;	fs["laserDistance"] >> laserDistance;
+
+	std::cout << cameraZ << std::endl;
+	std::cout << laserLength << std::endl;
+	std::cout << laserDistance << std::endl;
+
+	int numLaser;	fs["numLaser"] >> numLaser;
+	int scanSpeed;	fs["scanSpeed"] >> scanSpeed;
+	int fpsCam;	fs["fpsCam"] >> fpsCam;
+	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
+	float fanLaser;	fs["fanLaser"] >> fanLaser;
+
+	float minAngle = fanLaser / numLaser;
 	double deg2rad = 2*3.1416/360; 
-	// Conversione di un modello [da rendere più flessibile in fase in configurazione]
+	
+	// Conversione di un modello [da rendere piÃ¹ flessibile in fase in configurazione]
 	//system("osgconv ../data/bin1.stl ../data/bin1.osg");
 		
-	// Il nodo root è un group, un cui figlio è il modello 
+	// Il nodo root Ã¨ un group, un cui figlio Ã¨ il modello 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
 	
 	// Caricamento del modello 
