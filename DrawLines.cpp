@@ -1,5 +1,4 @@
-// include OSG
-#include "stdafx.h"
+
 #include <osgDB/ReadFile>
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
@@ -7,22 +6,20 @@
 #include <osg/Geometry>
 #include <osg/Matrixd>
 
+#include <math.h>       /* sin */
+#include <vector>  //for std::vector
+
+#include <osg/Point>
 #include <osg/Notify>
 #include <osg/MatrixTransform>
 #include <osg/PositionAttitudeTransform>
 #include <osg/Texture2D>
 #include <osg/TexGenNode>
 #include <osgUtil/Optimizer>
+#include <osgUtil/Optimizer>
+#include <osgUtil/LineSegmentIntersector>
+#include <osgUtil/IntersectionVisitor>
 #include <osgDB/Registry>
-
-// include STD
-#include <math.h>       /* sin */
-#include <vector>  //for std::vector
-#include <string>
-
-// include OCV
-#include "opencv2/opencv.hpp"
-#include <opencv2/core/core.hpp>
 
 /**
 @brief basic function to produce an OpenGL projection matrix and associated viewport parameters
@@ -89,8 +86,7 @@ algebra library, however it should be straightforward to port to any 4x4 matrix 
 //	 glMatrixMode(GL_PROJECTION);
 //	 glLoadMatrixd(&frustum(0, 0));
 //}
-
-#define PI 3.1415926
+/*
 
 void intrinsic2projection(osg::Matrixd &frustum, double alpha, double beta, double skew, double u0, double v0, int img_width, int img_height, double near_clip, double far_clip)	 {
 
@@ -135,157 +131,113 @@ void intrinsic2projection(osg::Matrixd &frustum, double alpha, double beta, doub
 	// glLoadMatrixd(&frustum(0, 0));
 }
 
+*/
+
+osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
+
+	
+	float X;
+	if(angle<0) 
+		X = center.x() - laserLength*tan(fabs(angle));
+	else
+		X = center.x() + laserLength*tan(fabs(angle));
+	float Y = center.y();
+	float Z = center.z();
+	osg::Vec3 end(X, Y, Z);
+	
+	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector= new osgUtil::LineSegmentIntersector(source,end);
+	//intersector->setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
+	osgUtil::IntersectionVisitor iv(intersector.get());
+	iv.apply(*model.get());
+	
+	if(intersector->containsIntersections()) {
+		osg::Vec3 point = intersector->getFirstIntersection().getLocalIntersectPoint();
+		if((point[2]<500&&point[2]>200)) {			
+			//std::cout << point[0] << " " << point[1] << " " << point[2] <<std::endl;
+			return point;		
+		}	
+	}
+
+	return osg::Vec3(0.0,0.0,0.0);	
+}
+
 int main(int, char **)
 {
-	std::string confFile = "../data/Configuration.xml";
-	cv::FileStorage fs;
-	fs.open(confFile, cv::FileStorage::READ);
+	int cameraX = 0;
+	int cameraY = 0;
+	int cameraZ = 1800;
+	int laserLength = 3000;
+	int	laserDistance = 500; // Da 500 a 800mm
 
-	int cameraX = 0;	// Posizione X e Y del setting non modificabili 
-	int cameraY = 0;	// nel file di configurazione
-	int cameraZ;		fs["cameraHeight"] >> cameraZ;
-	int laserLength;	fs["laserLength"] >> laserLength;
-	int	laserDistance;	fs["laserDistance"] >> laserDistance;
-
-	std::cout << cameraZ << std::endl;
-	std::cout << laserLength << std::endl;
-	std::cout << laserDistance << std::endl;
-
-	int numLaser;	fs["numLaser"] >> numLaser;
-	int scanSpeed;	fs["scanSpeed"] >> scanSpeed;
-	int fpsCam;		fs["fpsCam"] >> fpsCam;
-	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
-	float fanLaser;	fs["fanLaser"] >> fanLaser;
-
-	float minAngle = fanLaser / numLaser;
-	float deg2rad = 2 * 3.14 / 360;
+	int numLaser = 700;		// numero di linee che compongono il fascio
+	int scanSpeed;	//  Valori 100 mm/s – 1000 mm/s
+	int fpsCam;		// Valori 100 fps – 500 fps
+	double alphaLaser = 70;	// Valori 60° - 70°
+	double fanLaser = 45;		// Valori 30° - 45°
 	
+	double minAngle = fanLaser / numLaser;
+	double deg2rad = 2*3.1416/360; 
 	// Conversione di un modello [da rendere più flessibile in fase in configurazione]
 	//system("osgconv ../data/bin1.stl ../data/bin1.osg");
-
+		
 	// Il nodo root è un group, un cui figlio è il modello 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
-
+	
 	// Caricamento del modello 
 	std::cout << "Loading Model from Disk." << std::endl;
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("../data/bin1.osg");
 	std::cout << "Model Loaded. " << std::endl;
-	root->addChild(model.get());
-
-	std::vector<osg::ref_ptr<osg::Vec3Array> > bundle, bundle2;	// Vettore contenente tutti i punti necessari a disegnare le rette del fascio
-	std::vector<osg::ref_ptr<osg::Geode> > bundleGeode, bundle2Geode;
-	std::vector<osg::ref_ptr<osg::Geometry> > bundleGeometry, bundle2Geometry;
-
-	osg::ref_ptr<osg::Group> bundleNode = new osg::Group, bundle2Node = new osg::Group;
-	//root->addChild(bundleNode.get());
-	//root->addChild(bundle2Node.get());
-
-	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector;
-	osgUtil::IntersectionVisitor iv;
-
-
+	//root->addChild(model.get());
+	//osgUtil::Optimizer optimizer;  
+	//optimizer.optimize(model.get());
+	
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
-	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
+	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;	
 	osg::Vec3 point;
 
-	float actualAngle = -fanLaser / 2;
+	for(int i = 0; i<5; i++) {													//<<---------------------------prova ciclo
+
+	double actualAngle=-fanLaser/2;
+	cameraY = cameraY + 10;
 	float laserX = cameraX, laserY = cameraY + laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);					//punto di partenza del laser
 	float centerX = laserX;
 	float centerY = laserY - laserLength*sin(deg2rad*(90 - alphaLaser));
 	float centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
+	osg::Vec3 center(centerX, centerY, centerZ);	
 
 	float laser2X = cameraX, laser2Y = cameraY - laserDistance, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	float center2X = laser2X;
 	float center2Y = laser2Y + laserLength*sin(deg2rad*(90 - alphaLaser));
 	float center2Z = laser2Z - laserLength*cos(deg2rad*(90 - alphaLaser));
-	osg::ref_ptr<osg::Vec4Array> color = new osg::Vec4Array;
-	color->push_back(osg::Vec4(1.0, 0.0, 0.0, 1.0));
+	osg::Vec3 center2(center2X, center2Y, center2Z);
 
-	int i = 0;
-	for (i; actualAngle <= fanLaser / 2; i++) {
+	osg::Vec3 null(0.0,0.0,0.0);
 
-		bundle.push_back(new osg::Vec3Array);
-		bundleGeode.push_back(new osg::Geode());
-		bundleGeometry.push_back(new osg::Geometry());
-
-		// costruzione del fascio di rette
-		bundle[i]->push_back(source);
-		float X;
-		if (actualAngle<0)
-			X = centerX - laserLength*tan(deg2rad*fabs(actualAngle));
-		else
-			X = centerX + laserLength*tan(deg2rad*fabs(actualAngle));
-		float Y = centerY;
-		float Z = centerZ;
-		osg::Vec3 end(X, Y, Z);
-		bundle[i]->push_back(end);
-		/*
-		bundleGeometry[i]->setVertexArray(bundle[i].get());
-		bundleGeometry[i]->setColorArray(color.get());
-		bundleGeometry[i]->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
-		bundleGeometry[i]->addPrimitiveSet(new osg::DrawArrays(GL_LINES, 0, 2));
-		bundleGeode[i]->addDrawable(bundleGeometry[i].get());
-		bundleNode->addChild(bundleGeode[i].get());
-		*/
-
-		// costruzione dell'intersector
-		intersector = new osgUtil::LineSegmentIntersector(source, end);
-		iv.setIntersector(intersector.get());
-		iv.apply(*model.get());
-		if (intersector->containsIntersections()) {
-			point = intersector->getFirstIntersection().getLocalIntersectPoint();
-			if (point[2]<500 && point[2]>200) {
-				inter_points->push_back(point);
-				std::cout << point[0] << " " << point[1] << " " << point[2] << " " << actualAngle << std::endl;
-			}
-		}
-
-
-		//2
-		bundle2.push_back(new osg::Vec3Array);
-		bundle2Geode.push_back(new osg::Geode());
-		bundle2Geometry.push_back(new osg::Geometry());
-		bundle2[i]->push_back(source2);
-
-		if (actualAngle<0)
-			X = center2X - laserLength*tan(deg2rad*fabs(actualAngle));
-		else
-			X = center2X + laserLength*tan(deg2rad*fabs(actualAngle));
-
-		Y = center2Y;
-		Z = center2Z;
-		end.set(X, Y, Z);
-		bundle2[i]->push_back(end);
-		/*
-		bundle2Geometry[i]->setVertexArray(bundle2[i].get());
-		bundle2Geometry[i]->setColorArray(color.get());
-		bundle2Geometry[i]->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
-		bundle2Geometry[i]->addPrimitiveSet(new osg::DrawArrays(GL_LINES, 0, 2));
-		bundle2Geode[i]->addDrawable(bundle2Geometry[i].get());
-		bundle2Node->addChild(bundle2Geode[i].get());
-		*/
-		intersector = new osgUtil::LineSegmentIntersector(source2, end);
-		iv.setIntersector(intersector.get());
-		iv.apply(*model.get());
-		if (intersector->containsIntersections()) {
-			point = intersector->getFirstIntersection().getWorldIntersectPoint();
-			if (point[2]<500 && point[2]>200)
-				inter_points2->push_back(point);
-		}
-		actualAngle += minAngle;
-
+	for (actualAngle; actualAngle <= fanLaser/2  ; actualAngle += minAngle) {
+	
+		point = getIntersection(deg2rad*actualAngle, laserLength, source, center, model);
+		if (point!=null)
+			inter_points->push_back(point);
+		
+		point = getIntersection(deg2rad*actualAngle, laserLength, source2, center2, model);
+		if (point!=null)
+			inter_points2->push_back(point);
+			
 	}
-
+	
 	osg::ref_ptr<osg::Geode> interGeode = new osg::Geode();
 	osg::ref_ptr<osg::Geometry> interGeometry = new osg::Geometry();
-
+	osg::ref_ptr<osg::Vec4Array> color = new osg::Vec4Array;
+	color->push_back(osg::Vec4(1.0, 1.0, 1.0, 1.0));
+	
 	interGeometry->setVertexArray(inter_points.get());
 	interGeometry->setColorArray(color.get());
 	interGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
 	interGeometry->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, inter_points.get()->getNumElements()));
 
+	interGeometry->getOrCreateStateSet()->setAttribute(new osg::Point(3.0f), osg::StateAttribute::ON ); 
 	interGeode->addDrawable(interGeometry.get());
 	root->addChild(interGeode.get());
 	//2
@@ -298,31 +250,38 @@ int main(int, char **)
 	inter2Geometry->setColorArray(color.get());
 	inter2Geometry->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
 	inter2Geometry->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, inter_points2.get()->getNumElements()));
-
-
+	inter2Geometry->getOrCreateStateSet()->setAttribute(new osg::Point(3.0f), osg::StateAttribute::ON ); 
+}	
+	
+	osgViewer::Viewer viewer;
+	viewer.setSceneData(root.get());
+/*
 	//osg::ref_ptr<osg::Matrixd> frustum = new osg::Matrixd;
 	//	|a	g	u| |4615.04		0	1113.41	|
 	//	|0	B	v| |0		4615.51	480.016	|
 	//	|0	0	1| |0			0		1	|
 	osg::Matrixd frustum;
-	float alpha = 4615.04; int img_width = 2024;
-	float beta = 4615.51;	int img_height = 1088;
-	float skew = 0;		float near_clip = 100;
-	float u0 = 1113.41;	float far_clip = 1000;
-	float v0 = 480.016;
+	double alpha = 4615.04; int img_width = 2024;
+	double beta = 4615.51;	int img_height = 1088;
+	double skew = 0;		double near_clip = 100;
+	double u0 = 1113.41;	double far_clip = 1000;
+	double v0 = 480.016;
 	intrinsic2projection(frustum, alpha, beta, skew, u0, v0, img_width, img_height, near_clip, far_clip);
+*/
+	
+/*
 
-	osgViewer::Viewer viewer;
-	viewer.setSceneData(root.get());
 	//viewer.getCamera()->setProjectionMatrix(frustum); 
-
+		
 	// Create a matrix to specify a distance from the viewpoint.
 	osg::Matrix trans;
 	trans.makeTranslate(0., 0., -cameraZ);
 	// Rotation angle (in radians)
-	float angle(0.);
+	double angle(0.);
 
 	viewer.getCamera()->setViewMatrix(trans);
+	
+*/	
 	viewer.run();
 
 	//while (!viewer.done())
@@ -337,6 +296,6 @@ int main(int, char **)
 	//	viewer.frame();
 	//}	
 
-	return 0;
+	return 0; 
 }
 
