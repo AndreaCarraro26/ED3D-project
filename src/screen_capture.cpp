@@ -96,7 +96,7 @@ void takeScreenshot(osg::Node* pRoot, std::string filename)
 //int main(int, char **)
 //{
 //	
-//	// Il nodo root è un group, un cui figlio è il modello 
+//	// Il nodo root Ã¨ un group, un cui figlio Ã¨ il modello 
 //	osg::ref_ptr<osg::Group> root = new osg::Group;
 //
 //	// Caricamento del modello 
