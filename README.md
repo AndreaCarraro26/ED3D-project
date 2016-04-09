@@ -8,3 +8,7 @@ Per ottenere l'immagine della scena, è necessario chiamare
   get_pic(osg::ref_ptr<osg::Node> &_model, osg::Matrix &_trans, double _width, double _height)
 Fornisce in output un cv::Mat 
 es:	cv::Mat pippo = get_pic(loadedModel, trans, (double)width, (double)height);
+
+Per compilare il file screencapture.cpp, è necessario linkare osg, opencv, e opengl
+
+
