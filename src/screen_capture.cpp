@@ -247,8 +247,15 @@ void addCallbackToViewer(osgViewer::ViewerBase& viewer, WindowCaptureCallback* c
 	}
 }
 
-cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model, osg::Matrix &_trans, double _width, double _height)
-{
+cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model, 
+		osg::Matrix &_trans, 
+		double _width, double _height, 
+		double f_x, double f_y,
+		double x_0, double y_0, )
+{	
+	int zNear = 3;
+	int zFar = 1000;
+
 	GLenum readBuffer = GL_BACK;
 	WindowCaptureCallback::FramePosition position = WindowCaptureCallback::END_FRAME;
 	WindowCaptureCallback::Mode mode = WindowCaptureCallback::READ_PIXELS;
@@ -264,7 +271,9 @@ cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model, osg::Matrix &_trans, double _wi
 	osg::Matrix trans = _trans;
 	trans.makeTranslate(0., 0., -500);
 	viewer.getCamera()->setViewMatrix(trans);
-
+	viewer.getCamera()->setProjectionMatrixAsFrustum(-zNear*x_0 / f_x, zNear*(width - x_0) / f_x,
+		-zNear*y_0 / f_y, zNear*(height - y_0) / f_y, zNear, zFar);
+	
 	osg::ref_ptr<osg::GraphicsContext> pbuffer;
 
 	osg::ref_ptr<osg::GraphicsContext::Traits> traits = new osg::GraphicsContext::Traits;
@@ -330,6 +339,11 @@ int main(int argc, char** argv)
 	int width = 2024;
 	int height = 1088;
 
+	double f_x = 4615.04;
+	double f_y = 4615.51;
+	double x_0 = 1113.41;
+	double y_0 = 480.016;
+	
 	osg::Matrix trans;
 	trans.makeTranslate(0., 0., -500);
 	
@@ -343,7 +357,7 @@ int main(int argc, char** argv)
 	else std::cout << "loaded cessna" << std::endl;
 
 	//osg::Image* image = get_pic(loadedModel, trans, (double)width, (double)height );
-	cv::Mat pippo = get_pic(loadedModel, trans, (double)width, (double)height);
+	cv::Mat pippo = get_pic(loadedModel, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
 
 	cv::imwrite("Mat.bmp", pippo);
 
