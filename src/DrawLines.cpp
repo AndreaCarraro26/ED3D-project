@@ -152,47 +152,8 @@ int main(int, char **)
 	
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(root.get());
-/*
-	//osg::ref_ptr<osg::Matrixd> frustum = new osg::Matrixd;
-	//	|a	g	u| |4615.04		0	1113.41	|
-	//	|0	B	v| |0		4615.51	480.016	|
-	//	|0	0	1| |0			0		1	|
-	osg::Matrixd frustum;
-	double alpha = 4615.04; int img_width = 2024;
-	double beta = 4615.51;	int img_height = 1088;
-	double skew = 0;		double near_clip = 100;
-	double u0 = 1113.41;	double far_clip = 1000;
-	double v0 = 480.016;
-	intrinsic2projection(frustum, alpha, beta, skew, u0, v0, img_width, img_height, near_clip, far_clip);
-*/
-	
-/*
 
-	//viewer.getCamera()->setProjectionMatrix(frustum); 
-		
-	// Create a matrix to specify a distance from the viewpoint.
-	osg::Matrix trans;
-	trans.makeTranslate(0., 0., -cameraZ);
-	// Rotation angle (in radians)
-	double angle(0.);
-
-	viewer.getCamera()->setViewMatrix(trans);
-	
-*/	
 	viewer.run();
-
-	//while (!viewer.done())
-	//{	// Create the rotation matrix.
-	//	osg::Matrix rot;
-	//	rot.makeRotate(angle, osg::Vec3(1., 0., 0.));
-	//	angle += 0.01;
-	//	// Set the view matrix (the concatenation of the rotation and
-	//	// translation matrices).
-	//	viewer.getCamera()->setViewMatrix(trans);
-	//	// Draw the next frame.
-	//	viewer.frame();
-	//}	
-
 	return 0; 
 }
 
