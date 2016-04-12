@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 
 #include <osgDB/ReadFile>
 #include <osgDB/WriteFile>
@@ -251,7 +251,7 @@ cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model,
 		osg::Matrix &_trans, 
 		double _width, double _height, 
 		double f_x, double f_y,
-		double x_0, double y_0, )
+		double x_0, double y_0 )
 {	
 	int zNear = 3;
 	int zFar = 1000;
@@ -348,7 +348,7 @@ int main(int argc, char** argv)
 	trans.makeTranslate(0., 0., -500);
 	
 	// load the data
-	osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFile("cessna.osg");
+	osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFile("../data/cessna.osg");
 	if (!loadedModel)
 	{
 		std::cout << "No data loaded" << std::endl;
@@ -359,7 +359,7 @@ int main(int argc, char** argv)
 	//osg::Image* image = get_pic(loadedModel, trans, (double)width, (double)height );
 	cv::Mat pippo = get_pic(loadedModel, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
 
-	cv::imwrite("Mat.bmp", pippo);
+	cv::imwrite("../data/Mat_debug.bmp", pippo);
 
 	return 0; 
 

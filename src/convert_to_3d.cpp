@@ -22,7 +22,7 @@ Vec3d convert_to_3d (Mat image, Mat matrix, std::vector<double> plane) {
 	
 	Mat P = W_inv*point;
 	Vec3d point_3d;
-	std::cout<<"qui\n\n\n";
+
 	double z = -plane[3]/(plane[0]*P.at<double>(0,0) + plane[1]*P.at<double>(1,0) + plane[2]);
 	point_3d[0] = P.at<double>(0,0)*z;
 	point_3d[1] = P.at<double>(1,0)*z;
@@ -31,7 +31,7 @@ Vec3d convert_to_3d (Mat image, Mat matrix, std::vector<double> plane) {
 	return point_3d;
 }
 
-/* 	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calcola e stampa, poi se sono giusti e un'altra cosa)
+ //	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calcola e stampa, poi se sono giusti e un'altra cosa)
 
 int main() {
 	
@@ -58,4 +58,4 @@ int main() {
 	Vec3d point = convert_to_3d(image, intrinsic, plane);
 	std::cout<<point[0]<<" "<<point[1]<<" "<<point[2]<<std::endl;
 	return 0;
-}*/
+}

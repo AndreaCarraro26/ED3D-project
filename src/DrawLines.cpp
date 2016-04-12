@@ -21,6 +21,7 @@
 #include <osgUtil/IntersectionVisitor>
 #include <osgDB/Registry>
 
+#include <opencv2/core/core.hpp>
 osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
 
 	
