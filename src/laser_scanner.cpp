@@ -1,34 +1,17 @@
-#include "stdafx.h"
+//#include "stdafx.h"
+#include "laser_scanner.h"
 
 #include <osgDB/ReadFile>
-#include <osgDB/WriteFile>
 
 #include <osgUtil/Optimizer>
-#include <osg/CoordinateSystemNode>
-
-#include <osg/Switch>
-#include <osgText/Text>
 
 #include <osgViewer/Viewer>
 #include <osgViewer/ViewerEventHandlers>
 
-#include <osgGA/TrackballManipulator>
-#include <osgGA/FlightManipulator>
-#include <osgGA/DriveManipulator>
-#include <osgGA/KeySwitchMatrixManipulator>
-#include <osgGA/StateSetManipulator>
-#include <osgGA/AnimationPathManipulator>
-#include <osgGA/TerrainManipulator>
+#include <opencv2/core/core.hpp>
 
 #include <iostream>
 #include <sstream>
-#include <string.h>
-
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
-#include "laser_scanner.h"
-
 
 int main(int argc, char** argv)
 {
@@ -58,15 +41,9 @@ int main(int argc, char** argv)
 	std::cout << laserLength << std::endl;
 	std::cout << laserDistance << std::endl;
 
-	int numLaser;	fs["numLaser"] >> numLaser;
 	int scanSpeed;	fs["scanSpeed"] >> scanSpeed;
 	int fpsCam;	fs["fpsCam"] >> fpsCam;
-	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
 	float fanLaser;	fs["fanLaser"] >> fanLaser;
-
-	float minAngle = fanLaser / numLaser;
-	double deg2rad = 2 * 3.1416 / 360;
-
 
 	float time_between_frame = 1.0 / fpsCam;	// in secondi
 	float space_between_frame = time_between_frame*scanSpeed; // in millimetri
@@ -90,26 +67,28 @@ int main(int argc, char** argv)
 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
 	root->addChild(model.get());
+	
+	osg::Matrix trans;
+	
 
 	/////////////////////////////////////////////////////////////
+	
 	for(float position = cameraY; position < maxY; position += space_between_frame) {
 		scan_scene(root, model, position);
 		std::cout << position << std::endl;
+		trans.makeTranslate(0., position, cameraZ);
+		
+		/*cv::Mat pippo = get_pic(model, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
+		std::stringstream ss;
+		ss.str()="../data/Mat_debug";
+		ss<<position<<".bmp";
+		cv::imwrite(ss.str(), pippo);	*/
 	}
 
-	osg::Matrix trans;
-	trans.makeTranslate(0., 0., -500);
-
+	
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(root);
 	viewer.run();
-
-	//while (!viewer.done())
-	//{	
-	//	viewer.getCamera()->setViewMatrix(trans);
-	//	// Draw the next frame.
-	//	viewer.frame();
-	//}	
 
 	return 0; 
 

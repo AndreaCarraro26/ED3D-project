@@ -332,7 +332,7 @@ cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model,
 
 }
 
-
+/*
 
 int main(int argc, char** argv)
 {
@@ -363,4 +363,4 @@ int main(int argc, char** argv)
 
 	return 0; 
 
-}
+}*/

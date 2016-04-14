@@ -1,34 +1,32 @@
-#include "stdafx.h"
+//#include "stdafx.h"
+
+
+#include <math.h> 
+#include <vector>  
 
 #include <osgDB/ReadFile>
+
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
-#include <osgViewer/Viewer>
 #include <osg/Geometry>
 #include <osg/Matrixd>
-
-#include <math.h>       /* sin */
-#include <vector>  //for std::vector
-
 #include <osg/Point>
-#include <osg/Notify>
 #include <osg/MatrixTransform>
-#include <osg/PositionAttitudeTransform>
-#include <osg/Texture2D>
-#include <osg/TexGenNode>
+
 #include <osgUtil/Optimizer>
 #include <osgUtil/Optimizer>
 #include <osgUtil/LineSegmentIntersector>
 #include <osgUtil/IntersectionVisitor>
-#include <osgDB/Registry>
+
+#include <osgViewer/Viewer>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
 
-
 	float X;
+
 	if (angle<0)
 		X = center.x() - laserLength*tan(fabs(angle));
 	else
@@ -77,8 +75,6 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 	float minAngle = fanLaser / numLaser;
 	double deg2rad = 2 * 3.1416 / 360;
 
-	
-
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
@@ -90,13 +86,17 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 	float laserX = cameraX, laserY = cameraY + laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);
 	// definizione del punto di arrivo del raggio centrale
-	float centerX = laserX, centerY = laserY - laserLength*sin(deg2rad*(90 - alphaLaser)), centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
+	float centerX = laserX;
+	float centerY = laserY - laserLength*sin(deg2rad*(90 - alphaLaser));
+	float centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
 	osg::Vec3 center(centerX, centerY, centerZ);
 
 	// stesso procedimento già visto, applicato al secondo laser
 	float laser2X = cameraX, laser2Y = cameraY - laserDistance, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
-	float center2X = laser2X, center2Y = laser2Y + laserLength*sin(deg2rad*(90 - alphaLaser)), center2Z = laser2Z - laserLength*cos(deg2rad*(90 - alphaLaser));
+	float center2X = laser2X;
+	float center2Y = laser2Y + laserLength*sin(deg2rad*(90 - alphaLaser));
+	float center2Z = laser2Z - laserLength*cos(deg2rad*(90 - alphaLaser));
 	osg::Vec3 center2(center2X, center2Y, center2Z);
 
 	osg::Vec3 null(0.0, 0.0, 0.0);
