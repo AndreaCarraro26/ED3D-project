@@ -99,8 +99,6 @@ public:
 
 		void readPixels()
 		{
-			// std::cout<<"readPixels("<<_fileName<<" image "<<_currentImageIndex<<" "<<_currentPboIndex<<std::endl;
-
 			unsigned int nextImageIndex = (_currentImageIndex + 1) % _imageBuffer.size();
 
 			int width = 0, height = 0;
@@ -112,20 +110,11 @@ public:
 				_height = height;
 			}
 
-			// osg::Image* imagen = _imageBuffer[_currentImageIndex].get();
-
 			osg::Image * to_return = _imageBuffer[_currentImageIndex].get();
 
-#if 1
 			to_return->readPixels(0, 0, _width, _height,
 				_pixelFormat, _type);
-#endif
 
-			//if (!_fileName.empty())
-			//{
-			//	// osgDB::writeImageFile(*to_return, _fileName); 
-			//	osgDB::writeImageFile(*to_return, "lollo.bmp");
-			//}
 
 			cv::Mat illo(to_return->t(), to_return->s(), CV_8UC4);
 			illo.data = (uchar*)to_return->data();
@@ -247,7 +236,7 @@ void addCallbackToViewer(osgViewer::ViewerBase& viewer, WindowCaptureCallback* c
 	}
 }
 
-cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model, 
+cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, 
 		osg::Matrix &_trans, 
 		double _width, double _height, 
 		double f_x, double f_y,
@@ -260,7 +249,7 @@ cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model,
 	WindowCaptureCallback::FramePosition position = WindowCaptureCallback::END_FRAME;
 	WindowCaptureCallback::Mode mode = WindowCaptureCallback::READ_PIXELS;
 
-	osg::ref_ptr<osg::Node> model = _model;
+	osg::ref_ptr<osg::Group> model = _model;
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(model.get());
 
@@ -268,9 +257,9 @@ cv::Mat get_pic(osg::ref_ptr<osg::Node> &_model,
 	int height = _height;
 	viewer.getCamera()->setProjectionMatrixAsPerspective(30.0f, width / height, 1.0f, 10000.0f);
 
-	osg::Matrix trans = _trans;
-	trans.makeTranslate(0., 0., -500);
-	viewer.getCamera()->setViewMatrix(trans);
+	osg::Matrix view = _trans;
+//	trans.makeTranslate(0., 0., -500);
+	viewer.getCamera()->setViewMatrix(view);
 	viewer.getCamera()->setProjectionMatrixAsFrustum(-zNear*x_0 / f_x, zNear*(width - x_0) / f_x,
 		-zNear*y_0 / f_y, zNear*(height - y_0) / f_y, zNear, zFar);
 	

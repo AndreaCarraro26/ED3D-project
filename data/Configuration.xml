@@ -4,7 +4,7 @@
 	<cameraHeight> 2500 </cameraHeight>
 	<laserLength> 3100 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
 	<laserDistance> 600 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
-	<numLaser> 200 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<numLaser> 500 </numLaser>	<!-- Numero di linee che compongono il fascio -->
 	
 	<minY>-200</minY>			
 	<maxY>-150</maxY>

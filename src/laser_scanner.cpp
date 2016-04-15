@@ -1,5 +1,6 @@
 //#include "stdafx.h"
 #include "laser_scanner.h"
+#include "screen_capture.cpp"
 
 #include <osgDB/ReadFile>
 
@@ -76,13 +77,13 @@ int main(int argc, char** argv)
 	for(float position = cameraY; position < maxY; position += space_between_frame) {
 		scan_scene(root, model, position);
 		std::cout << position << std::endl;
-		trans.makeTranslate(0., position, cameraZ);
+		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0., position+1, 0.));
 		
-		/*cv::Mat pippo = get_pic(model, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
+		cv::Mat pippo = get_pic(root, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
 		std::stringstream ss;
 		ss.str()="../data/Mat_debug";
 		ss<<position<<".bmp";
-		cv::imwrite(ss.str(), pippo);	*/
+		cv::imwrite(ss.str(), pippo);
 	}
 
 	
