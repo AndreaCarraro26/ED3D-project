@@ -1,15 +1,16 @@
 //#include "stdafx.h"
 #include "laser_scanner.h"
-#include "screen_capture.cpp"
 
+#include <vector>
 #include <osgDB/ReadFile>
 
 #include <osgUtil/Optimizer>
 
 #include <osgViewer/Viewer>
-#include <osgViewer/ViewerEventHandlers>
+//#include <osgViewer/ViewerEventHandlers>
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
 #include <sstream>
@@ -19,14 +20,6 @@ int main(int argc, char** argv)
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	// lettura dei dati di configurazione
-	int width = 2024;
-	int height = 1088;
-
-	double f_x = 4615.04;
-	double f_y = 4615.51;
-	double x_0 = 1113.41;
-	double y_0 = 480.016;
-
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
@@ -67,26 +60,46 @@ int main(int argc, char** argv)
 	optimizer.optimize(model.get());
 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
-	root->addChild(model.get());
+	//root->addChild(model.get());
 	
 	osg::Matrix trans;
 	
-
 	/////////////////////////////////////////////////////////////
 	
 	for(float position = cameraY; position < maxY; position += space_between_frame) {
-		scan_scene(root, model, position);
-		std::cout << position << std::endl;
-		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0., position+1, 0.));
+	
+		osg::Vec4d planeA_coeffs, planeB_coeffs;
+		scan_scene(root, model, position, &planeA_coeffs, &planeB_coeffs);
 		
-		cv::Mat pippo = get_pic(root, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
+		//convert from vec4d to vector<double>
+		std::vector<double> planeA;
+		planeA.push_back(planeA_coeffs[0]);
+		planeA.push_back(planeA_coeffs[1]);
+		planeA.push_back(planeA_coeffs[2]);
+		planeA.push_back(planeA_coeffs[3]);	
+		
+		
+		std::vector<double> planeB;
+		planeB.push_back(planeB_coeffs[0]);
+		planeB.push_back(planeB_coeffs[1]);
+		planeB.push_back(planeB_coeffs[2]);
+		planeB.push_back(planeB_coeffs[3]);
+		
+		std::cout << position << std::endl;
+		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position-100, 0.));
+		
+		cv::Mat pippo = get_pic(root, trans);
 		std::stringstream ss;
-		ss.str()="../data/Mat_debug";
-		ss<<position<<".bmp";
+		ss << "../data/Mat_debug";
+		ss << position << ".bmp";
 		cv::imwrite(ss.str(), pippo);
+		
+		root->removeChild(1);
+
+		std::vector<cv::Vec3d> point = convert_to_3d(pippo, planeA);
+		
 	}
 
-	
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(root);
 	viewer.run();

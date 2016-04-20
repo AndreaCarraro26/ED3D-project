@@ -42,17 +42,15 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 
 	if (intersector->containsIntersections()) {
 		osg::Vec3 point = intersector->getFirstIntersection().getLocalIntersectPoint();
-		if ((point[2]<500 && point[2]>200)) {
-			//std::cout << point[0] << " " << point[1] << " " << point[2] <<std::endl;
-			return point;
-		}
+		return point;
 	}
 
 	return osg::Vec3(0.0, 0.0, 0.0);
 }
 
 
-int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, float positionY) {
+int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, float positionY,
+								osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
 	
 	////////////////////////////////////////////////////////////////
 	// ottenimento dei dati dal file di configurazione
@@ -138,11 +136,15 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 
 	intersection_geode->addDrawable(intersection_geometry_1.get());
 	intersection_geode->addDrawable(intersection_geometry_2.get());
-	root->addChild(intersection_geode.get());
+	root->insertChild(1,intersection_geode.get());
 
+	//calcolo e restituzione coeff del piano
+	osg::Plane planeA(source, center, osg::Vec3(centerX+100, centerY, centerZ));
+	osg::Plane planeB(source2, center2, osg::Vec3(center2X+100, center2Y, center2Z));
+	
+	*planeA_coeffs = planeA.asVec4();
+	*planeB_coeffs = planeB.asVec4();
 
 	return 0;
 }
-
-
 

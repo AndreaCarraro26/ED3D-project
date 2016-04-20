@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+
 
 cv::Mat img_to_return;
 int cond = 0;
@@ -194,54 +194,31 @@ void addCallbackToViewer(osgViewer::ViewerBase& viewer, WindowCaptureCallback* c
 {
 	osgViewer::ViewerBase::Windows windows;
 	viewer.getWindows(windows);
-	for (osgViewer::ViewerBase::Windows::iterator itr = windows.begin();
-	itr != windows.end();
-		++itr)
-	{
-		osgViewer::GraphicsWindow* window = *itr;
-		osg::GraphicsContext::Cameras& cameras = window->getCameras();
-		osg::Camera* lastCamera = 0;
-		for (osg::GraphicsContext::Cameras::iterator cam_itr = cameras.begin();
-		cam_itr != cameras.end();
-			++cam_itr)
-		{
-			if (lastCamera)
-			{
-				if ((*cam_itr)->getRenderOrder() > lastCamera->getRenderOrder())
-				{
-					lastCamera = (*cam_itr);
-				}
-				if ((*cam_itr)->getRenderOrder() == lastCamera->getRenderOrder() &&
-					(*cam_itr)->getRenderOrderNum() >= lastCamera->getRenderOrderNum())
-				{
-					lastCamera = (*cam_itr);
-				}
-			}
-			else
-			{
-				lastCamera = *cam_itr;
-			}
-		}
+	
+	osgViewer::GraphicsWindow* window = windows[0];
+	osg::GraphicsContext::Cameras& cameras = window->getCameras();
+	osg::Camera* camera = (*cameras.begin());
+	camera->setFinalDrawCallback(callback);
 
-		if (lastCamera)
-		{
-			osg::notify(osg::NOTICE) << "Last camera " << lastCamera << std::endl;
-
-			lastCamera->setFinalDrawCallback(callback);
-		}
-		else
-		{
-			osg::notify(osg::NOTICE) << "No camera found" << std::endl;
-		}
-	}
 }
 
-cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, 
-		osg::Matrix &_trans, 
-		double _width, double _height, 
-		double f_x, double f_y,
-		double x_0, double y_0 )
+cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
 {	
+
+	std::string confFile = "../data/Configuration.xml";
+	cv::FileStorage fs;
+	fs.open(confFile, cv::FileStorage::READ);
+	
+	double width;		fs["sensor_width"] >> width;
+	int height;			fs["sensor_height"] >> height;
+	
+	double f_x;			fs["sensor_f_x"] >> f_x;
+	double f_y;			fs["sensor_f_y"] >> f_y;
+	double x_0;			fs["sensor_x_0"] >> x_0;
+	double y_0;			fs["sensor_y_0"] >> y_0;
+
+	fs.release();
+	
 	int zNear = 3;
 	int zFar = 1000;
 
@@ -253,8 +230,7 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model,
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(model.get());
 
-	double width = _width;
-	int height = _height;
+	
 	viewer.getCamera()->setProjectionMatrixAsPerspective(30.0f, width / height, 1.0f, 10000.0f);
 
 	osg::Matrix view = _trans;
@@ -321,35 +297,3 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model,
 
 }
 
-/*
-
-int main(int argc, char** argv)
-{
-	int width = 2024;
-	int height = 1088;
-
-	double f_x = 4615.04;
-	double f_y = 4615.51;
-	double x_0 = 1113.41;
-	double y_0 = 480.016;
-	
-	osg::Matrix trans;
-	trans.makeTranslate(0., 0., -500);
-	
-	// load the data
-	osg::ref_ptr<osg::Node> loadedModel = osgDB::readNodeFile("../data/cessna.osg");
-	if (!loadedModel)
-	{
-		std::cout << "No data loaded" << std::endl;
-		return 1;
-	}
-	else std::cout << "loaded cessna" << std::endl;
-
-	//osg::Image* image = get_pic(loadedModel, trans, (double)width, (double)height );
-	cv::Mat pippo = get_pic(loadedModel, trans, (double)width, (double)height, f_x, f_y, x_0, y_0);
-
-	cv::imwrite("../data/Mat_debug.bmp", pippo);
-
-	return 0; 
-
-}*/
