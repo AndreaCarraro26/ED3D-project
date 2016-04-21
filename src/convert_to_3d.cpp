@@ -3,10 +3,13 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
+#include <pcl/point_types.h>
+
+
 
 using namespace cv;												//OCCHIO SE COPINCOLLI
 
-std::vector<Vec3d> convert_to_3d (Mat image, std::vector<double> plane_coeff) {	
+std::vector<pcl::PointXYZ> convert_to_3d (Mat image, std::vector<double> plane_coeff) {	
 	
 	Mat point(3,1,CV_64FC1);
 	std::string confFile = "../data/Configuration.xml";
@@ -30,25 +33,24 @@ std::vector<Vec3d> convert_to_3d (Mat image, std::vector<double> plane_coeff) {
 	intrinsic.at<double>(2,2) = 1;
 	
 	Mat W_inv = intrinsic.inv();
-	Vec3d point_3d;
 	Mat P;
 	double z;
 
-	std::vector<Vec3d> point_line;
+	std::vector<pcl::PointXYZ> point_line;
 	for (int i=0; i < image.rows; ++i)
 		for (int j=0; j < image.cols; ++j)
 			if (image.at<Vec3f>(i,j)[2]>250 && image.at<Vec3f>(i,j)[0]<5) {
 				point.at<double>(0) = j;
 				point.at<double>(1) = i;
 				point.at<double>(2) = 1;				
+				
 				P = W_inv*point;
 
 				z = -plane_coeff[3]/(plane_coeff[0]*P.at<double>(0,0) + plane_coeff[1]*P.at<double>(1,0) + plane_coeff[2]);
-				point_3d[0] = P.at<double>(0,0)*z;
-				point_3d[1] = P.at<double>(1,0)*z;
-				point_3d[2] = P.at<double>(2,0)*z;
+				pcl::PointXYZ point_3d( P.at<double>(0,0)*z, P.at<double>(1,0)*z, P.at<double>(2,0)*z);
 
 				point_line.push_back(point_3d);
+				std::cout<<point_3d<<std::endl;
 	}
 	
 	return point_line;

@@ -1,7 +1,6 @@
 //#include "stdafx.h"
 #include "laser_scanner.h"
 
-#include <vector>
 #include <osgDB/ReadFile>
 
 #include <osgUtil/Optimizer>
@@ -14,6 +13,10 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
+
+#include <pcl/point_types.h>
+#include <pcl/visualization/pcl_visualizer.h>	
 
 int main(int argc, char** argv)
 {
@@ -25,7 +28,7 @@ int main(int argc, char** argv)
 	fs.open(confFile, cv::FileStorage::READ);
 
 	int cameraX = 0;	// Posizione X e Y del setting non modificabili 
-	int cameraY; 		fs["minY"] >> cameraY;
+	int minY; 		fs["minY"] >> minY;
 	int maxY;			fs["maxY"] >> maxY;	
 	int cameraZ;		fs["cameraHeight"] >> cameraZ;
 	int laserLength;	fs["laserLength"] >> laserLength;
@@ -59,17 +62,24 @@ int main(int argc, char** argv)
 	osgUtil::Optimizer optimizer;
 	optimizer.optimize(model.get());
 
+	int insert_index, model_index = 1;
+
 	osg::ref_ptr<osg::Group> root = new osg::Group;
 	//root->addChild(model.get());
 	
 	osg::Matrix trans;
 	
 	/////////////////////////////////////////////////////////////
-	
-	for(float position = cameraY; position < maxY; position += space_between_frame) {
-	
+
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+
+	for(float position = minY; position <= maxY; position += space_between_frame) {
+
+		root->insertChild(model_index, model.get());
+
 		osg::Vec4d planeA_coeffs, planeB_coeffs;
-		scan_scene(root, model, position, &planeA_coeffs, &planeB_coeffs);
+		insert_index = scan_scene(root, model_index, position, &planeA_coeffs, &planeB_coeffs);
 		
 		//convert from vec4d to vector<double>
 		std::vector<double> planeA;
@@ -86,6 +96,7 @@ int main(int argc, char** argv)
 		planeB.push_back(planeB_coeffs[3]);
 		
 		std::cout << position << std::endl;
+
 		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position-100, 0.));
 		
 		cv::Mat pippo = get_pic(root, trans);
@@ -94,16 +105,27 @@ int main(int argc, char** argv)
 		ss << position << ".bmp";
 		cv::imwrite(ss.str(), pippo);
 		
-		root->removeChild(1);
+		osgViewer::Viewer viewosg;
+		viewosg.setSceneData(root.get());
+		viewosg.run();
+		std::cout<<root->getNumChildren()<<std::endl;
+		std::cout<<"drawed = "<<insert_index <<" model = "<< model_index <<std::endl;
+		if(insert_index != model_index && root->removeChild(insert_index))
+			std::cout<<"removed\n";
 
-		std::vector<cv::Vec3d> point = convert_to_3d(pippo, planeA);
-		
+
+		std::vector<pcl::PointXYZ> points = convert_to_3d(pippo, planeA);
+		cloud->insert(cloud->begin(), points.begin(), points.end());
 	}
 
-	osgViewer::Viewer viewer;
-	viewer.setSceneData(root);
-	viewer.run();
+/*
+	pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+	viewer.addCoordinateSystem(0.1);
+	viewer.addPointCloud<pcl::PointXYZ>(cloud,"input_cloud");
+	viewer.setBackgroundColor(0.2,0.2,0.2);
+	viewer.spin();*/
 
+	
 	return 0; 
 
 }

@@ -49,8 +49,8 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 }
 
 
-int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, float positionY,
-								osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
+int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY, 
+				osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
 	
 	////////////////////////////////////////////////////////////////
 	// ottenimento dei dati dal file di configurazione
@@ -72,6 +72,8 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 
 	float minAngle = fanLaser / numLaser;
 	double deg2rad = 2 * 3.1416 / 360;
+
+	osg::ref_ptr<osg::Node> model = root->getChild(model_index);
 
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
@@ -136,7 +138,11 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 
 	intersection_geode->addDrawable(intersection_geometry_1.get());
 	intersection_geode->addDrawable(intersection_geometry_2.get());
-	root->insertChild(1,intersection_geode.get());
+	
+	int draw_index = model_index + 1;
+	root->insertChild(draw_index, intersection_geode.get());
+	//root->addChild(intersection_geode.get());
+	//int draw_index = root->getChildIndex(intersection_geode.get());
 
 	//calcolo e restituzione coeff del piano
 	osg::Plane planeA(source, center, osg::Vec3(centerX+100, centerY, centerZ));
@@ -145,6 +151,6 @@ int scan_scene(osg::ref_ptr<osg::Group> root, osg::ref_ptr<osg::Node> model, flo
 	*planeA_coeffs = planeA.asVec4();
 	*planeB_coeffs = planeB.asVec4();
 
-	return 0;
+	return draw_index;
 }
 
