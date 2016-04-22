@@ -103,7 +103,7 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 
 	for (actualAngle; actualAngle <= fanLaser / 2; actualAngle += minAngle) {
 
-		std::cout << actualAngle << std::endl;
+		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
 		point = getIntersection(deg2rad*actualAngle, laserLength, source, center, model);
 		if (point != null)
@@ -139,10 +139,10 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 	intersection_geode->addDrawable(intersection_geometry_1.get());
 	intersection_geode->addDrawable(intersection_geometry_2.get());
 	
-	int draw_index = model_index + 1;
-	root->insertChild(draw_index, intersection_geode.get());
-	//root->addChild(intersection_geode.get());
-	//int draw_index = root->getChildIndex(intersection_geode.get());
+	//int draw_index = model_index + 1;
+	//root->insertChild(draw_index, intersection_geode.get());
+	root->addChild(intersection_geode.get());
+	int draw_index = root->getChildIndex(intersection_geode.get());
 
 	//calcolo e restituzione coeff del piano
 	osg::Plane planeA(source, center, osg::Vec3(centerX+100, centerY, centerZ));

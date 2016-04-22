@@ -6,7 +6,6 @@
 #include <osgUtil/Optimizer>
 
 #include <osgViewer/Viewer>
-//#include <osgViewer/ViewerEventHandlers>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -62,11 +61,12 @@ int main(int argc, char** argv)
 	osgUtil::Optimizer optimizer;
 	optimizer.optimize(model.get());
 
-	int insert_index, model_index = 1;
+	int drawable_index, model_index = 1;
 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
 	//root->addChild(model.get());
-	
+	//root->insertChild(model_index, model.get());
+
 	osg::Matrix trans;
 	
 	/////////////////////////////////////////////////////////////
@@ -76,10 +76,10 @@ int main(int argc, char** argv)
 
 	for(float position = minY; position <= maxY; position += space_between_frame) {
 
-		root->insertChild(model_index, model.get());
-
+		root->addChild(model.get());
+		model_index = root->getChildIndex(model.get());
 		osg::Vec4d planeA_coeffs, planeB_coeffs;
-		insert_index = scan_scene(root, model_index, position, &planeA_coeffs, &planeB_coeffs);
+		drawable_index = scan_scene(root, model_index, position, &planeA_coeffs, &planeB_coeffs);
 		
 		//convert from vec4d to vector<double>
 		std::vector<double> planeA;
@@ -99,20 +99,22 @@ int main(int argc, char** argv)
 
 		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position-100, 0.));
 		
+		osgViewer::Viewer viewosg;
+		viewosg.setSceneData(root.get());
+		viewosg.run();
+
 		cv::Mat pippo = get_pic(root, trans);
 		std::stringstream ss;
 		ss << "../data/Mat_debug";
 		ss << position << ".bmp";
 		cv::imwrite(ss.str(), pippo);
 		
-		osgViewer::Viewer viewosg;
-		viewosg.setSceneData(root.get());
-		viewosg.run();
 		std::cout<<root->getNumChildren()<<std::endl;
-		std::cout<<"drawed = "<<insert_index <<" model = "<< model_index <<std::endl;
-		if(insert_index != model_index && root->removeChild(insert_index))
+		std::cout<<"drawed = "<<drawable_index <<" model = "<< model_index <<std::endl;
+		if(drawable_index != model_index && root->removeChild(drawable_index))
 			std::cout<<"removed\n";
 
+		root->removeChild(model_index);
 
 		std::vector<pcl::PointXYZ> points = convert_to_3d(pippo, planeA);
 		cloud->insert(cloud->begin(), points.begin(), points.end());
