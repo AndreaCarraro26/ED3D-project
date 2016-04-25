@@ -296,4 +296,3 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
 	return img;
 
 }
-

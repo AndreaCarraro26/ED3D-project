@@ -28,15 +28,15 @@ int main(int argc, char** argv)
 
 	int cameraX = 0;	// Posizione X e Y del setting non modificabili 
 	int minY; 		fs["minY"] >> minY;
-	int maxY;			fs["maxY"] >> maxY;	
+	int maxY;			fs["maxY"] >> maxY;
 	int cameraZ;		fs["cameraHeight"] >> cameraZ;
 	int laserLength;	fs["laserLength"] >> laserLength;
 	int	laserDistance;	fs["laserDistance"] >> laserDistance;
 
-	std::cout << cameraZ << std::endl;
+	/*std::cout << cameraZ << std::endl;
 	std::cout << laserLength << std::endl;
 	std::cout << laserDistance << std::endl;
-
+*/
 	int scanSpeed;	fs["scanSpeed"] >> scanSpeed;
 	int fpsCam;	fs["fpsCam"] >> fpsCam;
 	float fanLaser;	fs["fanLaser"] >> fanLaser;
@@ -50,84 +50,82 @@ int main(int argc, char** argv)
 
 	// Caricamento del modello
 	std::cout << "Loading Model from Disk." << std::endl;
-	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("../data/bin1.stl");	
+	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("../data/bin1.stl");
 	if (!model)
 	{
 		std::cout << "No data loaded" << std::endl;
 		return 1;
 	}
 	std::cout << "Model Loaded. " << std::endl;
-	
+
 	osgUtil::Optimizer optimizer;
 	optimizer.optimize(model.get());
-
-	int drawable_index, model_index = 1;
 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
 	//root->addChild(model.get());
 	//root->insertChild(model_index, model.get());
 
 	osg::Matrix trans;
-	
+
 	/////////////////////////////////////////////////////////////
 
-
+	// Creazione point cloud da riempire
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-	for(float position = minY; position <= maxY; position += space_between_frame) {
-
-		root->addChild(model.get());
-		model_index = root->getChildIndex(model.get());
-		osg::Vec4d planeA_coeffs, planeB_coeffs;
-		drawable_index = scan_scene(root, model_index, position, &planeA_coeffs, &planeB_coeffs);
+	for (float position = minY; position <= maxY; position += space_between_frame) {
 		
+		osg::Vec4d planeA_coeffs, planeB_coeffs;
+		osg::ref_ptr<osg::Geode> point_node = new osg::Geode;
+
+		point_node = scan_scene(model, position, &planeA_coeffs, &planeB_coeffs);
+
 		//convert from vec4d to vector<double>
 		std::vector<double> planeA;
 		planeA.push_back(planeA_coeffs[0]);
 		planeA.push_back(planeA_coeffs[1]);
 		planeA.push_back(planeA_coeffs[2]);
-		planeA.push_back(planeA_coeffs[3]);	
-		
-		
+		planeA.push_back(planeA_coeffs[3]);
+
 		std::vector<double> planeB;
 		planeB.push_back(planeB_coeffs[0]);
 		planeB.push_back(planeB_coeffs[1]);
 		planeB.push_back(planeB_coeffs[2]);
 		planeB.push_back(planeB_coeffs[3]);
-		
+
 		std::cout << position << std::endl;
 
-		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position-100, 0.));
-		
-		osgViewer::Viewer viewosg;
-		viewosg.setSceneData(root.get());
-		viewosg.run();
+		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position - 100, 0.));
 
-		cv::Mat pippo = get_pic(root, trans);
+	/*	osgViewer::Viewer viewosg;
+		viewosg.setSceneData(root.get());
+		viewosg.run();*/
+
+		cv::Mat pippo = get_pic(point_node, trans);
+
+
 		std::stringstream ss;
 		ss << "../data/Mat_debug";
 		ss << position << ".bmp";
 		cv::imwrite(ss.str(), pippo);
+
+		cv::imshow("ciao", pippo);
+		cv::waitKey(0);
+
+		convert_to_3d(pippo, planeA, planeB, cloud);
+
 		
-		std::cout<<root->getNumChildren()<<std::endl;
-		std::cout<<"drawed = "<<drawable_index <<" model = "<< model_index <<std::endl;
-		if(drawable_index != model_index && root->removeChild(drawable_index))
-			std::cout<<"removed\n";
-
-		root->removeChild(model_index);
-
-		std::vector<pcl::PointXYZ> points = convert_to_3d(pippo, planeA);
-		cloud->insert(cloud->begin(), points.begin(), points.end());
 	}
-
-/*
+	
+	
+	// visualizzazione
 	pcl::visualization::PCLVisualizer viewer("PCL Viewer");
 	viewer.addCoordinateSystem(0.1);
 	viewer.addPointCloud<pcl::PointXYZ>(cloud,"input_cloud");
 	viewer.setBackgroundColor(0.2,0.2,0.2);
-	viewer.spin();*/
+	viewer.spin();
 
-	
-	return 0; 
+	cout << "Exit program." << endl;
+
+	return 0;
 
 }

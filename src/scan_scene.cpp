@@ -1,6 +1,7 @@
 //#include "stdafx.h"
 
 
+
 #include <math.h> 
 #include <vector>  
 
@@ -49,15 +50,15 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 }
 
 
-int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY, 
-				osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
-	
+osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positionY,
+	osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
+
 	////////////////////////////////////////////////////////////////
 	// ottenimento dei dati dal file di configurazione
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
-	
+
 	int cameraX = 0;
 	float cameraY = positionY;
 	int cameraZ;		fs["cameraHeight"] >> cameraZ;
@@ -72,8 +73,9 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 
 	float minAngle = fanLaser / numLaser;
 	double deg2rad = 2 * 3.1416 / 360;
+	///////////////////////////////////////////////////////////////
 
-	osg::ref_ptr<osg::Node> model = root->getChild(model_index);
+	osg::ref_ptr<osg::Group> root;	
 
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
@@ -81,7 +83,7 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 	osg::Vec3 point;
 
 	// angolo iniziale di disegno del laser
-	double actualAngle = -fanLaser / 2;		
+	double actualAngle = -fanLaser / 2;
 	// definizione del punto di applicazione del fascio
 	float laserX = cameraX, laserY = cameraY + laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);
@@ -91,7 +93,7 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 	float centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
 	osg::Vec3 center(centerX, centerY, centerZ);
 
-	// stesso procedimento già visto, applicato al secondo laser
+	// stesso procedimento giï¿½ visto, applicato al secondo laser
 	float laser2X = cameraX, laser2Y = cameraY - laserDistance, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	float center2X = laser2X;
@@ -138,19 +140,20 @@ int scan_scene(osg::ref_ptr<osg::Group> root, int model_index, float positionY,
 
 	intersection_geode->addDrawable(intersection_geometry_1.get());
 	intersection_geode->addDrawable(intersection_geometry_2.get());
-	
+
 	//int draw_index = model_index + 1;
 	//root->insertChild(draw_index, intersection_geode.get());
-	root->addChild(intersection_geode.get());
-	int draw_index = root->getChildIndex(intersection_geode.get());
+
+	
+	// point_node = intersection_geode;
+	
 
 	//calcolo e restituzione coeff del piano
-	osg::Plane planeA(source, center, osg::Vec3(centerX+100, centerY, centerZ));
-	osg::Plane planeB(source2, center2, osg::Vec3(center2X+100, center2Y, center2Z));
-	
+	osg::Plane planeA(source, center, osg::Vec3(centerX + 100, centerY, centerZ));
+	osg::Plane planeB(source2, center2, osg::Vec3(center2X + 100, center2Y, center2Z));
+
 	*planeA_coeffs = planeA.asVec4();
 	*planeB_coeffs = planeB.asVec4();
 
-	return draw_index;
+	return intersection_geode;
 }
-
