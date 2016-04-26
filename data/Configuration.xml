@@ -1,10 +1,9 @@
-
 <?xml version="1.0"?>
 <opencv_storage>
 	<cameraHeight> 2500 </cameraHeight>
-	<laserLength> 3100 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
+	<laserLength> 3000 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
 	<laserDistance> 600 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
-	<numLaser> 400 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<numLaser> 200 </numLaser>	<!-- Numero di linee che compongono il fascio -->
 	
 	<minY>-200</minY>			
 	<maxY>-150</maxY>
@@ -23,5 +22,9 @@
 	<sensor_x_0>1113.41</sensor_x_0>			<!-- matrice degli intrinseci	-->
 	<sensor_y_0>480.016</sensor_y_0>			<!-- 							-->
 
+	
+	<roi_heigh> 400 </roi_heigh>
+	<roi_y_1> 100 </roi_y_1> 
+	<roi_y_2> 588 </roi_y_2>
 	
 </opencv_storage>
