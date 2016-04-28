@@ -62,9 +62,6 @@ int main(int, char **)
 	int laserLength;	fs["laserLength"] >> laserLength;
 	int	laserDistance;	fs["laserDistance"] >> laserDistance;
 
-	std::cout << cameraZ << std::endl;
-	std::cout << laserLength << std::endl;
-	std::cout << laserDistance << std::endl;
 
 	int numLaser;	fs["numLaser"] >> numLaser;
 	int scanSpeed;	fs["scanSpeed"] >> scanSpeed;
@@ -85,9 +82,9 @@ int main(int, char **)
 	std::cout << "Loading Model from Disk." << std::endl;
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("../data/bin1.osg");
 	std::cout << "Model Loaded. " << std::endl;
-	//root->addChild(model.get());
-	//osgUtil::Optimizer optimizer;  
-	//optimizer.optimize(model.get());
+	root->addChild(model.get());
+	osgUtil::Optimizer optimizer;  
+	optimizer.optimize(model.get());
 	
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;	

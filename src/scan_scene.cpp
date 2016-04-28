@@ -51,7 +51,7 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 
 
 osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positionY,
-	osg::Vec4d* planeA_coeffs, osg::Vec4d* planeB_coeffs) {
+	osg::Vec4d& planeA_coeffs, osg::Vec4d& planeB_coeffs) {
 
 	////////////////////////////////////////////////////////////////
 	// ottenimento dei dati dal file di configurazione
@@ -152,8 +152,8 @@ osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positi
 	osg::Plane planeA(source, center, osg::Vec3(centerX + 100, centerY, centerZ));
 	osg::Plane planeB(source2, center2, osg::Vec3(center2X + 100, center2Y, center2Z));
 
-	*planeA_coeffs = planeA.asVec4();
-	*planeB_coeffs = planeB.asVec4();
+	planeA_coeffs = planeA.asVec4();
+	planeB_coeffs = planeB.asVec4();
 
 	return intersection_geode;
 }

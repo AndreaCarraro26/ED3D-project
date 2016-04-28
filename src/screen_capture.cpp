@@ -27,37 +27,35 @@
 #include <opencv2/core/core.hpp>
 
 
-cv::Mat img_to_return;
-int cond = 0;
+cv::Mat mat_to_return;
+int has_read = 0;
 
 	
 class WindowCaptureCallback : public osg::Camera::DrawCallback
 {
 public:
 
-	enum Mode
-	{
-		READ_PIXELS
-	};
-
-	enum FramePosition
-	{
-		END_FRAME
-	};
-
 	struct ContextData : public osg::Referenced
 	{
 
-		ContextData(osg::GraphicsContext* gc, Mode mode, GLenum readBuffer, const std::string& name) :
+		osg::ref_ptr<osg::Image> image;
+
+		osg::GraphicsContext*   _gc;
+		GLenum                  _readBuffer;
+
+		GLenum                  _pixelFormat;
+		GLenum                  _type;
+		int                     _width;
+		int                     _height;
+
+
+		ContextData(osg::GraphicsContext* gc, GLenum readBuffer) :
 			_gc(gc),
-			_mode(mode),
 			_readBuffer(readBuffer),
-			_fileName(name),
 			_pixelFormat(GL_BGRA),
 			_type(GL_UNSIGNED_BYTE),
 			_width(0),
-			_height(0),
-			_currentImageIndex(0)
+			_height(0)
 		{
 			if (gc->getTraits())
 			{
@@ -73,92 +71,47 @@ public:
 				}
 			}
 
-			getSize(gc, _width, _height);
+			if (gc->getTraits())
+			{
+				_width = gc->getTraits()->width;
+				_height = gc->getTraits()->height;
+			}
 
 			std::cout << "Window size " << _width << ", " << _height << std::endl;
 
 			// single buffered image
-			_imageBuffer.push_back(new osg::Image);
-		}
-
-		void getSize(osg::GraphicsContext* gc, int& width, int& height)
-		{
-			if (gc->getTraits())
-			{
-				width = gc->getTraits()->width;
-				height = gc->getTraits()->height;
-			}
+			image = new osg::Image;
 		}
 
 		void read()
 		{
-			osg::GLExtensions* ext = osg::GLExtensions::Get(_gc->getState()->getContextID(), true);
-			readPixels();
-
-		}
-
-		void readPixels()
-		{
-			unsigned int nextImageIndex = (_currentImageIndex + 1) % _imageBuffer.size();
-
-			int width = 0, height = 0;
-			getSize(_gc, width, height);
-			if (width != _width || _height != height)
-			{
-				std::cout << "   Window resized " << width << ", " << height << std::endl;
-				_width = width;
-				_height = height;
-			}
-
-			osg::Image * to_return = _imageBuffer[_currentImageIndex].get();
-
-			to_return->readPixels(0, 0, _width, _height,
+		
+			image->readPixels(0, 0, _width, _height,
 				_pixelFormat, _type);
 
+			mat_to_return.create(_width, _height, CV_8UC4);
+			mat_to_return.data = (uchar*)image->data();
+			cv::flip(mat_to_return, mat_to_return, 0);
 
-			cv::Mat illo(to_return->t(), to_return->s(), CV_8UC4);
-			illo.data = (uchar*)to_return->data();
-			cv::flip(illo, illo, 0);
-
-			img_to_return = illo.clone();
-			cond = 1;
-			//_currentImageIndex = nextImageIndex;
+			has_read = 1;
 		}
-
-
-
-
-		typedef std::vector< osg::ref_ptr<osg::Image> > ImageBuffer;
-
-		osg::GraphicsContext*   _gc;
-		Mode                    _mode;
-		GLenum                  _readBuffer;
-		std::string             _fileName;
-
-		GLenum                  _pixelFormat;
-		GLenum                  _type;
-		int                     _width;
-		int                     _height;
-
-		unsigned int            _currentImageIndex;
-		ImageBuffer             _imageBuffer;
 
 	};
 
-	WindowCaptureCallback(Mode mode, FramePosition position, GLenum readBuffer) :
-		_mode(mode),
-		_position(position),
+	typedef std::map<osg::GraphicsContext*, osg::ref_ptr<ContextData> > ContextDataMap;
+
+	GLenum                      _readBuffer;
+	mutable OpenThreads::Mutex  _mutex;
+	mutable ContextDataMap      _contextDataMap;
+
+	WindowCaptureCallback(GLenum readBuffer) :
 		_readBuffer(readBuffer)
 	{
 	}
 
-	FramePosition getFramePosition() const { return _position; }
-
 	ContextData* createContextData(osg::GraphicsContext* gc) const
 	{
-		std::stringstream filename;
-		filename << "test_" << _contextDataMap.size() << ".bmp";
-		return new ContextData(gc, _mode, _readBuffer, filename.str());
+		return new ContextData(gc, _readBuffer);
 	}
 
 	ContextData* getContextData(osg::GraphicsContext* gc) const
@@ -179,30 +132,11 @@ public:
 		cd->read();
 	}
 
-	typedef std::map<osg::GraphicsContext*, osg::ref_ptr<ContextData> > ContextDataMap;
-
-	Mode                        _mode;
-	FramePosition               _position;
-	GLenum                      _readBuffer;
-	mutable OpenThreads::Mutex  _mutex;
-	mutable ContextDataMap      _contextDataMap;
-
 
 };
 
-void addCallbackToViewer(osgViewer::ViewerBase& viewer, WindowCaptureCallback* callback)
-{
-	osgViewer::ViewerBase::Windows windows;
-	viewer.getWindows(windows);
-	
-	osgViewer::GraphicsWindow* window = windows[0];
-	osg::GraphicsContext::Cameras& cameras = window->getCameras();
-	osg::Camera* camera = (*cameras.begin());
-	camera->setFinalDrawCallback(callback);
 
-}
-
-cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
+cv::Mat get_pic(osg::ref_ptr<osg::Geode> _model, osg::Matrix &_trans)
 {	
 
 	std::string confFile = "../data/Configuration.xml";
@@ -223,18 +157,14 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
 	int zFar = 1000;
 
 	GLenum readBuffer = GL_BACK;
-	WindowCaptureCallback::FramePosition position = WindowCaptureCallback::END_FRAME;
-	WindowCaptureCallback::Mode mode = WindowCaptureCallback::READ_PIXELS;
 
 	osg::ref_ptr<osg::Group> model = _model;
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(model.get());
 
-	
 	viewer.getCamera()->setProjectionMatrixAsPerspective(30.0f, width / height, 1.0f, 10000.0f);
 
 	osg::Matrix view = _trans;
-//	trans.makeTranslate(0., 0., -500);
 	viewer.getCamera()->setViewMatrix(view);
 	viewer.getCamera()->setProjectionMatrixAsFrustum(-zNear*x_0 / f_x, zNear*(width - x_0) / f_x,
 		-zNear*y_0 / f_y, zNear*(height - y_0) / f_y, zNear, zFar);
@@ -270,10 +200,7 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
 		osg::ref_ptr<osg::Camera> camera = new osg::Camera;
 		camera->setGraphicsContext(pbuffer.get());
 		camera->setViewport(new osg::Viewport(0, 0, width, height));
-		// GLenum buffer = pbuffer->getTraits()->doubleBuffer ? GL_BACK : GL_FRONT;
-		// camera->setDrawBuffer(buffer);
-		//camera->setReadBuffer(buffer);
-		camera->setFinalDrawCallback(new WindowCaptureCallback(mode, position, readBuffer));
+		camera->setFinalDrawCallback(new WindowCaptureCallback(readBuffer));
 
 		viewer.addSlave(camera.get());
 
@@ -286,13 +213,9 @@ cv::Mat get_pic(osg::ref_ptr<osg::Group> &_model, osg::Matrix &_trans)
 
 	viewer.frame();
 
-	std::string s = ".";
-	while (cond == 0) 
-	{
-		s + ".";
-	}
-	cv::Mat img = img_to_return.clone();
+	while (!has_read) 
+	{}
 
-	return img;
+	return mat_to_return;
 
 }

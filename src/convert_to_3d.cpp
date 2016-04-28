@@ -26,7 +26,7 @@ void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<doub
 
 	int roi_y_1;		fs["roi_y_1"] >> roi_y_1;
 	int roi_y_2;		fs["roi_y_2"] >> roi_y_2;
-	int roi_heigh;		fs["roi_heigh"] >> roi_heigh;
+	int roi_height;		fs["roi_height"] >> roi_height;
 
 	fs.release();
 
@@ -43,60 +43,60 @@ void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<doub
 	intrinsic.at<double>(2, 1) = 0;
 	intrinsic.at<double>(2, 2) = 1;
 
-	Mat W_inv = intrinsic.inv();
+	Mat M_inv = intrinsic.inv();
 	Mat P;
 	double z;
 
 	//// ricorda: roi(Xapplicazione, Yapplicazione, larghezza, altezza) 
-	//Rect roi1(0, roi_y_1, width, roi_heigh);
+	//Rect roi1(0, roi_y_1, width, roi_height);
 	//Mat image_roi1 = image(roi1);
 	//
-	//Rect roi2(0, roi_y_2, width, roi_heigh);
+	//Rect roi2(0, roi_y_2, width, roi_height);
 	//Mat image_roi2 = image(roi2);
 
 	// imshow("Example1", image);	waitKey(0);
-	int temp;
+	int row;
 
 	std::vector<pcl::PointXYZ> point_line;
-	for (int i = 0; i < roi_heigh; ++i) {
+	for (int i = 0; i < roi_height; ++i) {
 		for (int j = 0; j < width; ++j) {
 			
 			// && image.at<Vec3b>(i + roi_y_1, j)[0]<100
 			// elaborazione per la ROI1
-			int col = i + roi_y_1;
-			temp = image.at<Vec3b>(col, j)[2];
- 			if (image.at<Vec3b>(col, j)[2]>200 && image.at<Vec3b>(i + roi_y_1, j)[0]<50) {
+			row = i + roi_y_1;
+
+ 			if (image.at<Vec3b>(row, j)[2]>200 && image.at<Vec3b>(row, j)[0]<50) {
 				point.at<double>(0) = j ;
 				point.at<double>(1) = i+ roi_y_1;
 				point.at<double>(2) = 1;
 
-				P = W_inv*point;
+				P = M_inv*point;
 				
-				z = -planeA_coeff[3] / (planeA_coeff[0] * P.at<double>(0, 0) + planeA_coeff[1] * P.at<double>(1, 0) + planeA_coeff[2]);
-				pcl::PointXYZ point_3d(P.at<double>(0, 0)*z, P.at<double>(1, 0)*z, P.at<double>(2, 0)*z);
+				z = -planeA_coeff[3] / (planeA_coeff[0] * P.at<double>(0) + planeA_coeff[1] * P.at<double>(1) + planeA_coeff[2]);
+				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
 
 				point_line.push_back(point_3d);
 
-				std::cout << "inserted first: " << i + roi_y_1 << " " << j << std::endl;
+				//std::cout << "inserted first: " << point_3d << std::endl;
 				
 			}
 			// && image.at<Vec3b>(i + roi_y_2, j	)[0]<5
 			// elaborazione per la ROI2
-			col = i + roi_y_2;
-			temp = image.at<Vec3b>(col, j)[2];
-			if (image.at<Vec3b>(col, j )[2]>200 && image.at<Vec3b>(i + roi_y_2, j)[0]<50) {
+			row = i + roi_y_2;
+
+			if (image.at<Vec3b>(row, j)[2]>200 && image.at<Vec3b>(row, j)[0]<50) {
 				point.at<double>(0) = j ;
 				point.at<double>(1) = i+ roi_y_2;
 				point.at<double>(2) = 1;
 
-				P = W_inv*point;
+				P = M_inv*point;
 
-				z = -planeB_coeff[3] / (planeB_coeff[0] * P.at<double>(0, 0) + planeB_coeff[1] * P.at<double>(1, 0) + planeB_coeff[2]);
-				pcl::PointXYZ point_3d(P.at<double>(0, 0)*z, P.at<double>(1, 0)*z, P.at<double>(2, 0)*z);
+				z = -planeB_coeff[3] / (planeB_coeff[0] * P.at<double>(0) + planeB_coeff[1] * P.at<double>(1) + planeB_coeff[2]);
+				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
 
 				point_line.push_back(point_3d);
 
-				std::cout << "inserted second: " << i + roi_y_2 << " " << j << std::endl;
+				//std::cout << "inserted second: " << point_3d << std::endl;
 			}
 
 		}
@@ -108,7 +108,7 @@ void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<doub
 	return;
 }
 
-//	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calcola e stampa, poi se sono giusti e un'altra cosa)
+//	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calrowa e stampa, poi se sono giusti e un'altra cosa)
 /*
 int main() {
 double f_x = 4615.04;

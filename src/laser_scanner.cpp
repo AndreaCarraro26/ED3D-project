@@ -14,7 +14,6 @@
 #include <sstream>
 #include <vector>
 
-#include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>	
 
 int main(int argc, char** argv)
@@ -62,7 +61,7 @@ int main(int argc, char** argv)
 	optimizer.optimize(model.get());
 
 	osg::ref_ptr<osg::Group> root = new osg::Group;
-	//root->addChild(model.get());
+	root->addChild(model.get());
 	//root->insertChild(model_index, model.get());
 
 	osg::Matrix trans;
@@ -77,7 +76,7 @@ int main(int argc, char** argv)
 		osg::Vec4d planeA_coeffs, planeB_coeffs;
 		osg::ref_ptr<osg::Geode> point_node = new osg::Geode;
 
-		point_node = scan_scene(model, position, &planeA_coeffs, &planeB_coeffs);
+		point_node = scan_scene(model, position, planeA_coeffs, planeB_coeffs);
 
 		//convert from vec4d to vector<double>
 		std::vector<double> planeA;
@@ -85,44 +84,44 @@ int main(int argc, char** argv)
 		planeA.push_back(planeA_coeffs[1]);
 		planeA.push_back(planeA_coeffs[2]);
 		planeA.push_back(planeA_coeffs[3]);
+		std::cout << "coefficients" << planeA[0] <<" "<< planeA[1] <<" "<< planeA[2] <<" "<< planeA[3] << std::endl;
+
 
 		std::vector<double> planeB;
 		planeB.push_back(planeB_coeffs[0]);
 		planeB.push_back(planeB_coeffs[1]);
 		planeB.push_back(planeB_coeffs[2]);
-		planeB.push_back(planeB_coeffs[3]);
+		planeB.push_back(planeB_coeffs[3]); 
+		std::cout << "coefficients" << planeB[0] <<" "<< planeB[1] <<" "<< planeB[2] <<" "<< planeB[3] << std::endl;
 
 		std::cout << position << std::endl;
 
-		trans.makeLookAt(osg::Vec3d(0., position, cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position - 100, 0.));
+		trans.makeLookAt(osg::Vec3d(0., position, -cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position - 100, 0.));
 
-	/*	osgViewer::Viewer viewosg;
-		viewosg.setSceneData(root.get());
-		viewosg.run();*/
+		//VISUAL di prova NON SERVE
+	//	root->addChild(point_node);
+	//	osgViewer::Viewer viewosg;
+	//	viewosg.setSceneData(root.get());
+	//	viewosg.run();
 
 		cv::Mat pippo = get_pic(point_node, trans);
-
 
 		std::stringstream ss;
 		ss << "../data/Mat_debug";
 		ss << position << ".bmp";
 		cv::imwrite(ss.str(), pippo);
 
-		cv::imshow("ciao", pippo);
-		cv::waitKey(0);
-
 		convert_to_3d(pippo, planeA, planeB, cloud);
 
-		
 	}
 	
 	
 	// visualizzazione
-	pcl::visualization::PCLVisualizer viewer("PCL Viewer");
-	viewer.addCoordinateSystem(0.1);
-	viewer.addPointCloud<pcl::PointXYZ>(cloud,"input_cloud");
-	viewer.setBackgroundColor(0.2,0.2,0.2);
-	viewer.spin();
+	pcl::visualization::PCLVisualizer pcl_viewer("PCL Viewer");
+	pcl_viewer.addCoordinateSystem(0.1);
+	pcl_viewer.addPointCloud<pcl::PointXYZ>(cloud,"input_cloud");
+	pcl_viewer.setBackgroundColor(0.2,0.2,0.2);
+	pcl_viewer.spin();
 
 	cout << "Exit program." << endl;
 
