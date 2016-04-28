@@ -89,9 +89,14 @@ public:
 			image->readPixels(0, 0, _width, _height,
 				_pixelFormat, _type);
 
-			mat_to_return.create(_width, _height, CV_8UC4);
-			mat_to_return.data = (uchar*)image->data();
-			cv::flip(mat_to_return, mat_to_return, 0);
+			cv::Mat illo(image->t(), image->s(), CV_8UC4);
+			illo.data = (uchar*)image->data();
+			cv::flip(illo, illo, 0);
+
+			mat_to_return = illo.clone();
+			//mat_to_return.create(_width, _height, CV_8UC4);
+		//	mat_to_return.data = (uchar*)image->data();
+			//cv::flip(mat_to_return, mat_to_return, 0);
 
 			has_read = 1;
 		}
