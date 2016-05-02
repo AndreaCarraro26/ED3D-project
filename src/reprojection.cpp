@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include <math.h> 
 #include <vector>  
@@ -24,7 +24,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
+osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
 
 	float X;
 
@@ -138,7 +138,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
-		point = getIntersection(deg2rad*actualAngle, laserLength, source, center, model);
+		point = getInter(deg2rad*actualAngle, laserLength, source, center, model);
 		if (point != null) {
 			/*pointCV[0] = point.x();
 			pointCV[1] = point.y();
@@ -152,7 +152,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 		}
 		
 		// intersezioni del secondo laser
-		point = getIntersection(deg2rad*actualAngle, laserLength, source2, center2, model);
+		point = getInter(deg2rad*actualAngle, laserLength, source2, center2, model);
 		if (point != null) {
 			/*pointCV[0] = point.x();
 			pointCV[1] = point.y();
