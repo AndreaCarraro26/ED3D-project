@@ -6,13 +6,13 @@
 	<laserDistance> 600 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
 	<numLaser> 400 </numLaser>	<!-- Numero di linee che compongono il fascio -->
 	
-	<minY>-200</minY>			
-	<maxY>-150</maxY>
+	<minY>30</minY>			
+	<maxY>70</maxY>
 	
-	<scanSpeed>1000 </scanSpeed>	<!-- Valori 100 mm/s – 1000 mm/s -->
+	<scanSpeed>500 </scanSpeed>	<!-- Valori 100 mm/s – 1000 mm/s -->
 	<fpsCam>100	 </fpsCam>	<!-- Valori 100 fps – 500 fps -->
 	<alphaLaser> 65 </alphaLaser>	<!-- Valori 60° - 70° -->
-	<fanLaser> 35 </fanLaser>	<!-- Valori 30° - 45° -->
+	<fanLaser> 30 </fanLaser>	<!-- Valori 30° - 45° -->
 	
 	<!-- Dati del sensore della camera-->
 	<sensor_width>2024</sensor_width>			<!-- Altezza in pixel della telegamera-->
@@ -24,6 +24,6 @@
 	<sensor_y_0>480.016</sensor_y_0>			<!-- 							-->
 
 	<roi_height> 400 </roi_height>
-	<roi_y_1> 100 </roi_y_1> 
-	<roi_y_2> 588 </roi_y_2>
+	<roi_y_1> 0 </roi_y_1> 
+	<roi_y_2> 650 </roi_y_2>
 </opencv_storage>

@@ -6,13 +6,12 @@
 
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/visualization/pcl_visualizer.h>										
 
-using namespace cv;												
-
-void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<double> planeB_coeff, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+void convert_to_3d(cv::Mat image, std::vector<double> planeA_coeff, std::vector<double> planeB_coeff, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
 	std::cout << "dentro al 3d" << std::endl;
-	Mat point(3, 1, CV_64FC1);	//allocazione di un punto tridimensionale
+	
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
@@ -43,9 +42,11 @@ void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<doub
 	intrinsic.at<double>(2, 1) = 0;
 	intrinsic.at<double>(2, 2) = 1;
 
-	Mat M_inv = intrinsic.inv();
-	Mat P;
+	cv::Mat M_inv = intrinsic.inv();
+	cv::Mat P;
 	double z;
+	cv::Mat point(3, 1, CV_64FC1);	//allocazione di un punto tridimensionale
+	double A, B, C, D;
 
 	//// ricorda: roi(Xapplicazione, Yapplicazione, larghezza, altezza) 
 	//Rect roi1(0, roi_y_1, width, roi_height);
@@ -57,58 +58,68 @@ void convert_to_3d(Mat image, std::vector<double> planeA_coeff, std::vector<doub
 	// imshow("Example1", image);	waitKey(0);
 	int row;
 
-	std::vector<pcl::PointXYZ> point_line;
+	//std::vector<pcl::PointXYZ> point_line;
+
 	for (int i = 0; i < roi_height; ++i) {
 		for (int j = 0; j < width; ++j) {
 			
 			// && image.at<Vec3b>(i + roi_y_1, j)[0]<100
 			// elaborazione per la ROI1
 			row = i + roi_y_1;
+			A = planeA_coeff[0];
+			B = planeA_coeff[1];
+			C = planeA_coeff[2];
+			D = planeA_coeff[3];
 
- 			if (image.at<Vec3b>(row, j)[2]>200 && image.at<Vec3b>(row, j)[0]<50) {
-				point.at<double>(0) = j ;
-				point.at<double>(1) = i+ roi_y_1;
+ 			if (image.at<uchar>(row, j)>128) {
+				point.at<double>(0) = j;
+				point.at<double>(1) = row;
 				point.at<double>(2) = 1;
 
 				P = M_inv*point;
 				
-				z = -planeA_coeff[3] / (planeA_coeff[0] * P.at<double>(0) + planeA_coeff[1] * P.at<double>(1) + planeA_coeff[2]);
-				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
+				z = -D / (A * P.at<double>(0) + B * P.at<double>(1) + C);
 
-				point_line.push_back(point_3d);
+				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
+				//std::cout << point_3d << std::endl;
+				//std::cout << "Prova appartenenza piano " << point_3d.x*A + point_3d.y*B + point_3d.z*C + D << std::endl;
+				//cv::waitKey(100);
+				cloud->push_back(point_3d);
 
 				//std::cout << "inserted first: " << point_3d << std::endl;
 				
 			}
 			// && image.at<Vec3b>(i + roi_y_2, j	)[0]<5
 			// elaborazione per la ROI2
+			
 			row = i + roi_y_2;
-
-			if (image.at<Vec3b>(row, j)[2]>200 && image.at<Vec3b>(row, j)[0]<50) {
+			A = planeB_coeff[0];
+			B = planeB_coeff[1];
+			C = planeB_coeff[2];
+			D = planeB_coeff[3];
+			
+			if (image.at<uchar>(row, j)==255) {
 				point.at<double>(0) = j ;
-				point.at<double>(1) = i+ roi_y_2;
+				point.at<double>(1) = row;
 				point.at<double>(2) = 1;
 
 				P = M_inv*point;
 
-				z = -planeB_coeff[3] / (planeB_coeff[0] * P.at<double>(0) + planeB_coeff[1] * P.at<double>(1) + planeB_coeff[2]);
+				z = - D / (A*P.at<double>(0) + B*P.at<double>(1) + C);
 				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
 
-				point_line.push_back(point_3d);
+				cloud->push_back(point_3d);
 
 				//std::cout << "inserted second: " << point_3d << std::endl;
 			}
-
+			
 		}
 			
 	}
-	
-	cloud->insert(cloud->begin(), point_line.begin(), point_line.end());
-
 	return;
 }
 
-//	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calrowa e stampa, poi se sono giusti e un'altra cosa)
+//	TEST MAIN - FUNZIONA TUTTO A OCCHIO (perlomeno calcola e stampa, poi se sono giusti e un'altra cosa)
 /*
 int main() {
 double f_x = 4615.04;

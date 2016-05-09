@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 
 #include <math.h> 
 #include <vector>  
@@ -191,17 +191,19 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	//std::cout << imagePoints.size() << std::endl;
 
 	float x, y;
+	int count=0;
 	for (int i = 0; i < imagePoints.size(); i++) {
 		x = imagePoints[i][0];
 		y = imagePoints[i][1];
 		if (0<((int)x) && ((int)x) < width && 0<((int)y) && ((int)y) < height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
+			count++;
 		}
 			
 
 	}
-
+	std::cout<<"Punti in questa Mat: "<<count<<std::endl;
 	/////////////////////////////////////////////////////////////////////////////////////
 
 	//calcolo e restituzione coeff del piano

@@ -75,16 +75,16 @@ int main(int argc, char** argv)
 		
 		osg::Vec4d planeA_coeffs, planeB_coeffs;
 		osg::ref_ptr<osg::Geode> point_node = new osg::Geode;
-
-		point_node = scan_scene(model, position, planeA_coeffs, planeB_coeffs);
-
+		std::cout<<"Finding intersection and capturing image...";
+		cv::Mat screenshot = reproject(model, position, planeA_coeffs, planeB_coeffs);
+		std::cout<<" done.\n";
 		//convert from vec4d to vector<double>
 		std::vector<double> planeA;
 		planeA.push_back(planeA_coeffs[0]);
 		planeA.push_back(planeA_coeffs[1]);
 		planeA.push_back(planeA_coeffs[2]);
 		planeA.push_back(planeA_coeffs[3]);
-		std::cout << "coefficients" << planeA[0] <<" "<< planeA[1] <<" "<< planeA[2] <<" "<< planeA[3] << std::endl;
+		std::cout << "PlaneA coefficients: " << planeA[0] <<" "<< planeA[1] <<" "<< planeA[2] <<" "<< planeA[3] << std::endl;
 
 
 		std::vector<double> planeB;
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
 		planeB.push_back(planeB_coeffs[1]);
 		planeB.push_back(planeB_coeffs[2]);
 		planeB.push_back(planeB_coeffs[3]); 
-		std::cout << "coefficients" << planeB[0] <<" "<< planeB[1] <<" "<< planeB[2] <<" "<< planeB[3] << std::endl;
+		std::cout << "PlaneB coefficients: " << planeB[0] <<" "<< planeB[1] <<" "<< planeB[2] <<" "<< planeB[3] << std::endl;
 
 		std::cout << position << std::endl;
 
@@ -104,18 +104,17 @@ int main(int argc, char** argv)
 	//	viewosg.setSceneData(root.get());
 	//	viewosg.run();
 
-		cv::Mat pippo = get_pic(point_node, trans);
+		//cv::Mat pippo = get_pic(point_node, trans);
 
 		std::stringstream ss;
 		ss << "../data/Mat_debug";
 		ss << position << ".bmp";
-		cv::imwrite(ss.str(), pippo);
+		cv::imwrite(ss.str(), screenshot);
 
-		convert_to_3d(pippo, planeA, planeB, cloud);
+		convert_to_3d(screenshot, planeA, planeB, cloud);
 
 	}
-	
-	
+	std::cout<<"Punti nella cloud "<<cloud->points.size()<<std::endl;
 	// visualizzazione
 	pcl::visualization::PCLVisualizer pcl_viewer("PCL Viewer");
 	pcl_viewer.addCoordinateSystem(0.1);

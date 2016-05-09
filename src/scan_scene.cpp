@@ -24,7 +24,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
+osg::Vec3f getIntersection(double angle, int laserLength, osg::Vec3f source, osg::Vec3f center, osg::ref_ptr<osg::Node> model) {
 
 	float X;
 
@@ -34,7 +34,7 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 		X = center.x() + laserLength*tan(fabs(angle));
 	float Y = center.y();
 	float Z = center.z();
-	osg::Vec3 end(X, Y, Z);
+	osg::Vec3f end(X, Y, Z);
 
 	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector = new osgUtil::LineSegmentIntersector(source, end);
 	//intersector->setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
@@ -42,11 +42,11 @@ osg::Vec3 getIntersection(double angle, int laserLength, osg::Vec3 source, osg::
 	iv.apply(*model.get());
 
 	if (intersector->containsIntersections()) {
-		osg::Vec3 point = intersector->getFirstIntersection().getLocalIntersectPoint();
+		osg::Vec3f point = intersector->getFirstIntersection().getLocalIntersectPoint();
 		return point;
 	}
 
-	return osg::Vec3(0.0, 0.0, 0.0);
+	return osg::Vec3f(0.0, 0.0, 0.0);
 }
 
 
@@ -80,28 +80,29 @@ osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positi
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
-	osg::Vec3 point;
+	osg::Vec3f point;
 
 	// angolo iniziale di disegno del laser
 	double actualAngle = -fanLaser / 2;
 	// definizione del punto di applicazione del fascio
 	float laserX = cameraX, laserY = cameraY + laserDistance, laserZ = cameraZ;
-	osg::Vec3 source(laserX, laserY, laserZ);
+	osg::Vec3f source(laserX, laserY, laserZ);
 	// definizione del punto di arrivo del raggio centrale
 	float centerX = laserX;
 	float centerY = laserY - laserLength*sin(deg2rad*(90 - alphaLaser));
 	float centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
-	osg::Vec3 center(centerX, centerY, centerZ);
+	osg::Vec3f center(centerX, centerY, centerZ);
 
 	// stesso procedimento gi� visto, applicato al secondo laser
 	float laser2X = cameraX, laser2Y = cameraY - laserDistance, laser2Z = cameraZ;
-	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
+	osg::Vec3f source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	float center2X = laser2X;
 	float center2Y = laser2Y + laserLength*sin(deg2rad*(90 - alphaLaser));
 	float center2Z = laser2Z - laserLength*cos(deg2rad*(90 - alphaLaser));
-	osg::Vec3 center2(center2X, center2Y, center2Z);
+	osg::Vec3f center2(center2X, center2Y, center2Z);
 
-	osg::Vec3 null(0.0, 0.0, 0.0);
+	osg::Vec3f null(0.0, 0.0, 0.0);
+	std::cout<<"finding intersections..."<<std::flush;
 
 	for (actualAngle; actualAngle <= fanLaser / 2; actualAngle += minAngle) {
 
@@ -116,6 +117,7 @@ osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positi
 			inter_points2->push_back(point);
 
 	}
+	std::cout<<" done.\n"<<std::flush;
 
 	/////////////////////////////////////////////////////////////////////////////////////
 	// Rappresentazione dei punti di intersezione nella scena
@@ -149,11 +151,13 @@ osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node> model,  float positi
 	
 
 	//calcolo e restituzione coeff del piano
-	osg::Plane planeA(source, center, osg::Vec3(centerX + 100, centerY, centerZ));
-	osg::Plane planeB(source2, center2, osg::Vec3(center2X + 100, center2Y, center2Z));
+	osg::Plane planeA(source, center, osg::Vec3f(centerX + 100, centerY, centerZ));
+	osg::Plane planeB(source2, center2, osg::Vec3f(center2X + 100, center2Y, center2Z));
 
 	planeA_coeffs = planeA.asVec4();
 	planeB_coeffs = planeB.asVec4();
+
+	std::cout << "Prova appartenenza piano " << center.x()*planeA_coeffs[0] + center.y()*planeA_coeffs[1] +center.z()*planeA_coeffs[2] + planeA_coeffs[3] << std::endl;
 
 	return intersection_geode;
 }
