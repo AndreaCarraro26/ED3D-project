@@ -1,4 +1,4 @@
-//#include "stdafx.h"
+#include "stdafx.h"
 
 #include <math.h> 
 #include <vector>  
@@ -57,17 +57,20 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
-
-	int cameraX = 0;
-	float cameraY = positionY;
-	int cameraZ;		fs["cameraHeight"] >> cameraZ;
-	int laserLength;	fs["laserLength"] >> laserLength;
-	int	laserDistance;	fs["laserDistance"] >> laserDistance;
+	double deg2rad = 2 * 3.1416 / 360;
 
 	int numLaser;	fs["numLaser"] >> numLaser;
 	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
 	float fanLaser;	fs["fanLaser"] >> fanLaser;
 
+	int cameraX = 0;
+	float cameraY = positionY;
+	int cameraZ;		fs["cameraHeight"] >> cameraZ;
+	//double laserLength;	laserLength = cameraZ / (double)sin(deg2rad*alphaLaser) + 100; //fs["laserLength"] >> laserLength;
+	double laserLength = 15000;
+	int	laserDistance;	fs["laserDistance"] >> laserDistance;
+
+	
 	double f_x;			fs["sensor_f_x"] >> f_x;
 	double f_y;			fs["sensor_f_y"] >> f_y;
 	double x_0;			fs["sensor_x_0"] >> x_0;
@@ -92,7 +95,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	intrinsic.at<double>(2, 2) = 1;
 
 	float minAngle = fanLaser / numLaser;
-	float deg2rad = 2 * 3.1416 / 360;
+	
 	///////////////////////////////////////////////////////////////
 
 	osg::ref_ptr<osg::Group> root;
@@ -128,22 +131,12 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 
 	osg::Vec3 null(0.0, 0.0, 0.0);
 
-	//
-	//cv::Mat transformCoordinate = cv::Mat::eye(4, 4, CV_32F);
-	//	transformCoordinate.at<float>(0, 2) = -cameraX;
-	//	transformCoordinate.at<float>(1, 2) = -cameraY;
-	//	transformCoordinate.at<float>(2, 2) = -cameraX;
-	
 	for (actualAngle; actualAngle <= fanLaser / 2; actualAngle += minAngle) {
 
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
 		point = getInter(deg2rad*actualAngle, laserLength, source, center, model);
 		if (point != null) {
-			/*pointCV[0] = point.x();
-			pointCV[1] = point.y();
-			pointCV[2] = point.z();*/
-
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -154,10 +147,6 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 		// intersezioni del secondo laser
 		point = getInter(deg2rad*actualAngle, laserLength, source2, center2, model);
 		if (point != null) {
-			/*pointCV[0] = point.x();
-			pointCV[1] = point.y();
-			pointCV[2] = point.z();*/
-
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -166,6 +155,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 		}
 
 	}
+	
 	/////////////////////////////////////////////////////////////////////////////////////
 	cv::Mat rVec(3, 1, cv::DataType<double>::type); // Rotation vector
 	rVec.at<double>(0) = 0;	rVec.at<double>(1) = 0;	rVec.at<double>(2) = 0;
@@ -184,26 +174,21 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	cv::Mat image_to_return(height, width, CV_8UC1);
 	image_to_return.setTo(0);
 
-	cv::projectPoints(intersection_points, rVec, tVec, intrinsic, distCoeffs, imagePoints);
-
-	
+	if (intersection_points.size()!=0)
+		cv::projectPoints(intersection_points, rVec, tVec, intrinsic, distCoeffs, imagePoints);
 
 	//std::cout << imagePoints.size() << std::endl;
 
 	float x, y;
-	int count=0;
 	for (int i = 0; i < imagePoints.size(); i++) {
 		x = imagePoints[i][0];
 		y = imagePoints[i][1];
 		if (0<((int)x) && ((int)x) < width && 0<((int)y) && ((int)y) < height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
-			count++;
 		}
-			
-
 	}
-	std::cout<<"Punti in questa Mat: "<<count<<std::endl;
+
 	/////////////////////////////////////////////////////////////////////////////////////
 
 	//calcolo e restituzione coeff del piano
