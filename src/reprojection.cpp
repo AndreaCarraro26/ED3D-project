@@ -5,6 +5,11 @@
 
 #include <osgDB/ReadFile>
 
+#include <osgUtil/Optimizer>
+#include <osg/ComputeBoundsVisitor>
+#include <osgViewer/Viewer>
+#include <osg/MatrixTransform>
+
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
 #include <osg/Geometry>
@@ -50,7 +55,7 @@ osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 ce
 }
 
 
-cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& planeA_coeffs, osg::Vec4d& planeB_coeffs) {
+cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{ 
 
 	////////////////////////////////////////////////////////////////
 	// ottenimento dei dati dal file di configurazione
@@ -66,11 +71,10 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	int cameraX = 0;
 	float cameraY = positionY;
 	int cameraZ;		fs["cameraHeight"] >> cameraZ;
-	//double laserLength;	laserLength = cameraZ / (double)sin(deg2rad*alphaLaser) + 100; //fs["laserLength"] >> laserLength;
-	double laserLength = 15000;
+	double laserLength;	fs["laserLength"] >> laserLength;
+	
 	int	laserDistance;	fs["laserDistance"] >> laserDistance;
 
-	
 	double f_x;			fs["sensor_f_x"] >> f_x;
 	double f_y;			fs["sensor_f_y"] >> f_y;
 	double x_0;			fs["sensor_x_0"] >> x_0;
@@ -95,9 +99,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 	intrinsic.at<double>(2, 2) = 1;
 
 	float minAngle = fanLaser / numLaser;
-	
-	///////////////////////////////////////////////////////////////
-
+		
 	osg::ref_ptr<osg::Group> root;
 
 	// allocazione dei punti di intersezione dei due laser
@@ -188,17 +190,6 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY, osg::Vec4d& pl
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
 		}
 	}
-
-	/////////////////////////////////////////////////////////////////////////////////////
-
-	//calcolo e restituzione coeff del piano
-	osg::Plane planeA(source, center, osg::Vec3(centerX + 100, centerY, centerZ));
-	osg::Plane planeB(source2, center2, osg::Vec3(center2X + 100, center2Y, center2Z));
-
-	planeA_coeffs = planeA.asVec4();
-	planeB_coeffs = planeB.asVec4();
-
-	/////////////////////////////////////////////////////////////////////////////////////
 
 	return image_to_return;
 }
