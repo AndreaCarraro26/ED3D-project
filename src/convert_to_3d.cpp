@@ -1,5 +1,5 @@
+#include "stdafx.h"
 
-//#include "stdafx.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <iostream>
@@ -8,10 +8,10 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/visualization/pcl_visualizer.h>										
 
-void convert_to_3d(cv::Mat image, std::vector<double> planeA_coeff, std::vector<double> planeB_coeff, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+void convert_to_3d(cv::Mat image, double position, std::vector<double> planeA_coeff, std::vector<double> planeB_coeff, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
-	std::cout << "dentro al 3d" << std::endl;
-	
+	//std::cout << "dentro al 3d" << std::endl;
+
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
@@ -26,6 +26,10 @@ void convert_to_3d(cv::Mat image, std::vector<double> planeA_coeff, std::vector<
 	int roi_y_1;		fs["roi_y_1"] >> roi_y_1;
 	int roi_y_2;		fs["roi_y_2"] >> roi_y_2;
 	int roi_height;		fs["roi_height"] >> roi_height;
+
+	int cameraX = 0 ;
+	double cameraY = position;
+	int cameraZ;		fs["cameraHeight"] >> cameraZ;
 
 	fs.release();
 
@@ -43,79 +47,66 @@ void convert_to_3d(cv::Mat image, std::vector<double> planeA_coeff, std::vector<
 	intrinsic.at<double>(2, 2) = 1;
 
 	cv::Mat M_inv = intrinsic.inv();
+	
 	cv::Mat P;
 	double z;
-	cv::Mat point(3, 1, CV_64FC1);	//allocazione di un punto tridimensionale
-	double A, B, C, D;
-
-	//// ricorda: roi(Xapplicazione, Yapplicazione, larghezza, altezza) 
-	//Rect roi1(0, roi_y_1, width, roi_height);
-	//Mat image_roi1 = image(roi1);
-	//
-	//Rect roi2(0, roi_y_2, width, roi_height);
-	//Mat image_roi2 = image(roi2);
-
-	// imshow("Example1", image);	waitKey(0);
+	cv::Mat point(3, 1, CV_64FC1);	//allocazione di un punto tridimensional
+	
+	double A1, B1, C1, D1, A2, B2, C2, D2;
+	A1 = planeB_coeff[0];	A2 = planeA_coeff[0];
+	B1 = planeB_coeff[1];	B2 = planeA_coeff[1];
+	C1 = planeB_coeff[2];	C2 = planeA_coeff[2];
+	D1 = planeB_coeff[3];	D2 = planeA_coeff[3];
+	
+	int num_point_inserted = 0 ;
 	int row;
-
-	//std::vector<pcl::PointXYZ> point_line;
-
 	for (int i = 0; i < roi_height; ++i) {
 		for (int j = 0; j < width; ++j) {
-			
+
 			// && image.at<Vec3b>(i + roi_y_1, j)[0]<100
 			// elaborazione per la ROI1
 			row = i + roi_y_1;
-			A = planeA_coeff[0];
-			B = planeA_coeff[1];
-			C = planeA_coeff[2];
-			D = planeA_coeff[3];
+						
+			if (image.at<uchar>(row, j) == 128) {
+				point.at<double>(0,0) = j;
+				point.at<double>(1,0) = row;
+				point.at<double>(2,0) = 1;
+				
+				P = M_inv*point;
 
- 			if (image.at<uchar>(row, j)>128) {
+				z = -D1 / (A1 * P.at<double>(0) + B1 * P.at<double>(1) + C1);
+
+				pcl::PointXYZ point_3d(P.at<double>(0)*z + cameraX, P.at<double>(1)*z + cameraY, P.at<double>(2)*z + cameraZ);
+				//std::cout << point_3d << std::endl;
+				//std::cout << "Prova appartenenza piano " << point_3d.x*A1 + point_3d.y*B1 + point_3d.z*C1 + D << std::endl;
+				//cv::waitKey(100);
+				cloud->push_back(point_3d);
+				num_point_inserted++;
+
+			}
+
+			row = i + roi_y_2;
+			
+			if (image.at<uchar>(row, j) == 255) {
 				point.at<double>(0) = j;
 				point.at<double>(1) = row;
 				point.at<double>(2) = 1;
 
 				P = M_inv*point;
-				
-				z = -D / (A * P.at<double>(0) + B * P.at<double>(1) + C);
 
-				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
-				//std::cout << point_3d << std::endl;
-				//std::cout << "Prova appartenenza piano " << point_3d.x*A + point_3d.y*B + point_3d.z*C + D << std::endl;
-				//cv::waitKey(100);
-				cloud->push_back(point_3d);
-
-				//std::cout << "inserted first: " << point_3d << std::endl;
-				
-			}
-			// && image.at<Vec3b>(i + roi_y_2, j	)[0]<5
-			// elaborazione per la ROI2
-			
-			row = i + roi_y_2;
-			A = planeB_coeff[0];
-			B = planeB_coeff[1];
-			C = planeB_coeff[2];
-			D = planeB_coeff[3];
-			
-			if (image.at<uchar>(row, j)==255) {
-				point.at<double>(0) = j ;
-				point.at<double>(1) = row;
-				point.at<double>(2) = 1;
-
-				P = M_inv*point;
-
-				z = - D / (A*P.at<double>(0) + B*P.at<double>(1) + C);
-				pcl::PointXYZ point_3d(P.at<double>(0)*z, P.at<double>(1)*z, P.at<double>(2)*z);
+				z = -(D2 / (A2*P.at<double>(0) + B2*P.at<double>(1) + C2));
+				pcl::PointXYZ point_3d(P.at<double>(0)*z + cameraX, P.at<double>(1)*z+ cameraY, P.at<double>(2)*z + cameraZ);
 
 				cloud->push_back(point_3d);
-
-				//std::cout << "inserted second: " << point_3d << std::endl;
+				num_point_inserted++;
 			}
-			
+
 		}
-			
+
 	}
+
+	//std::cout << "Inseriti nella PC " << num_point_inserted << " punti"<< std::endl;
+
 	return;
 }
 
