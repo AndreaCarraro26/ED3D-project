@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "laser_scanner.h"
 
 #include <osgDB/ReadFile>
@@ -18,9 +19,19 @@
 #include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>	
 
+int _waitKey() {
+
+	#ifdef _WIN32
+		system("pause");
+	#elif linux 
+		system("read");
+	#endif
+		
+	return 0; 
+}
+
 int main(int argc, char** argv)
 {
-
 	/////////////////////////////////////////////////////////////////////////////////////
 	// lettura dei dati di configurazione
 	std::string confFile = "../data/Configuration.xml";
@@ -30,15 +41,16 @@ int main(int argc, char** argv)
 
 	std::string modelName; fs["model"] >> modelName;
 
-	int cameraX = 0;	// Posizione X e Y del setting non modificabili 
-	int cameraZ;		fs["cameraHeight"] >> cameraZ;
+	float cameraX = 0;	// Posizione X e Y del setting non modificabili 
+	float cameraZ;		fs["cameraHeight"] >> cameraZ;
 
 	int	alphaLaser;		fs["alphaLaser"] >> alphaLaser;
-	int	laserDistance;	fs["laserDistance"] >> laserDistance;
-	//double laserLength = 6000;	//laserLength = cameraZ / (double)sin(deg2rad*alphaLaser) +10 ; //fs["laserLength"] >> laserLength;
+	float	laserDistance;	fs["laserDistance"] >> laserDistance;
+	float laserLength;	fs["laserLength"] >> laserLength;
 
+	bool ignoreHeight;		fs["ignoreHeight"] >> ignoreHeight;
 	bool useBounds;		fs["useBounds"] >> useBounds;
-	int minY;			fs["minY"] >> minY; 
+	int minY;			fs["minY"] >> minY;
 	int maxY;			fs["maxY"] >> maxY;
 
 	int scanSpeed;		fs["scanSpeed"] >> scanSpeed;
@@ -48,117 +60,137 @@ int main(int argc, char** argv)
 	float time_between_frame = 1.0 / fpsCam;	// in secondi
 	float space_between_frame = time_between_frame*scanSpeed; // in millimetri
 
-	
-	
-
 	fs.release();
 
 	/////////////////////////////////////////////////////////////////////////////////////////
 
 	// Caricamento del modello
-	std::cout << "Caricamento del modello \""<< modelName << "\"...";
+	std::cout << "Caricamento del modello \"" << modelName << "\"...";
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
 	if (!model)
 	{
 		std::cout << "Nessuno modello trovato con quel nome." << std::endl;
+		_waitKey();
 		return 1;
 	}
 	std::cout << "OK " << std::endl;
 
+	// Ottimizzazione della mesh
 	osgUtil::Optimizer optimizer;
 	optimizer.optimize(model.get());
 
-	// calcolo dimensioni della mesh 
+	// Calcolo delle dimensioni della mesh 
 	osg::ComputeBoundsVisitor cbbv;
 	model->accept(cbbv);
 	osg::BoundingBox bb = cbbv.getBoundingBox();
 	osg::Vec3 ModelSize = bb._max - bb._min;
 
-	std::cout << "Dimensioni del modello:" << std::endl;
-	std::cout << "x_min: " << bb.xMin() << " x_max: " << bb.xMax() << " x: " << ModelSize[0] << "mm" << std::endl;
-	std::cout << "y_min: " << bb.yMin() << " y_max: " << bb.yMax() << " y: " << ModelSize[1] << "mm" << std::endl;
-	std::cout << "z_min: " << "0" << " z_max: " << ModelSize[2] << " z: " << ModelSize[2] << "mm" << std::endl;
-	std::cout << "-----z_min: " << bb.zMin() << " z_max: " << bb.zMax() << " z: " << ModelSize[2] << "mm" << std::endl;
+	// Il modello viene traslato in posizione centrale rispetto al sistema di riferimento 
+	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
+	node_to_intersect->setMatrix(osg::Matrix::translate(-bb.xMax()+(bb.xMax()-bb.xMin())/2, -bb.yMax() + (bb.yMax() - bb.yMin())/2, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
+	node_to_intersect->addChild(model.get());
 
-	if (!useBounds) {
-		minY = bb.yMin() - cameraZ*tan(deg2rad*(90 - alphaLaser)) + laserDistance ;
-		maxY = bb.yMax() + cameraZ*tan(deg2rad*(90 - alphaLaser)) - laserDistance ;
+	// Riottenimento delle dimensioni del modello e visualizzazione  
+	osg::ComputeBoundsVisitor cbbx;
+	node_to_intersect->accept(cbbx);
+	osg::BoundingBox bbx = cbbx.getBoundingBox();
+	ModelSize = bbx._max - bbx._min;
+
+	std::cout << "Dimensioni del modello:" << std::endl;
+	std::cout << "\tx_min: " << bbx.xMin() << " x_max: " << bbx.xMax() << " x: " << ModelSize[0] << "mm" << std::endl;
+	std::cout << "\ty_min: " << bbx.yMin() << " y_max: " << bbx.yMax() << " y: " << ModelSize[1] << "mm" << std::endl;
+	std::cout << "\tz_min: " << bbx.zMin() << " z_max: " << bbx.zMax() << " z: " << ModelSize[2] << "mm" << std::endl;
+
+	if (!useBounds) {		// Se impostato nella configurazione, permette la scansione solo in un range prestabilito
+		minY = bbx.yMin() - cameraZ*tan(deg2rad*(90 - alphaLaser)) + laserDistance;
+		maxY = bbx.yMax() + cameraZ*tan(deg2rad*(90 - alphaLaser)) - laserDistance;
 	}
 
-	float space_spanned = 0;
-	float space_to_run = maxY - minY;
+	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
+	float iter = 0;
+	float total_space = maxY - minY;
+	float num_iterations = total_space / space_between_frame + 1;
 
-	osg::ref_ptr<osg::Group> root = new osg::Group;
-	root->addChild(model.get());
-	//root->insertChild(model_index, model.get());
-
-	osg::Matrix trans;
-
-	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
-	node_to_intersect->setMatrix(osg::Matrix::translate(.0f, 0.0f, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
-	node_to_intersect->addChild(model.get());
+	// Istruzioni di OSG
+	//osg::ref_ptr<osg::Group> root = new osg::Group;
+	//root->addChild(model.get());
 
 	/////////////////////////////////////////////////////////////
 
-	// Creazione point cloud da riempire
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-	for (float position = minY; position <= maxY; position += space_between_frame) {
+	// Calcolo l'altezza del punto di intersezione dei piani laser. 
+	float z_intersection = cameraZ - laserDistance*tan(deg2rad*alphaLaser);
+	if (z_intersection <= bbx.zMax()) {
+		std::cout << "ATTENZIONE: l'altezza dei punti di intersezione tra i due piani laser " << std::endl;
+		std::cout << "^^^^^^^^^^  e' inferiore all'altezza massima del modello caricato." << std::endl;
+		std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema camera/laser di almeno " << ceil(bbx.zMax() - z_intersection) << "mm." << std::endl;
+		if (!ignoreHeight) {
+			_waitKey();
+			return 1;
+		}
+		else std::cout << "La scansione viene eseguita ignorando il suggerimento. " << std::endl;
 		
-		osg::Vec4d planeA_coeffs, planeB_coeffs;
-		osg::ref_ptr<osg::Geode> point_node = new osg::Geode;
-		std::cout<<"Finding intersection and capturing image...";
-		cv::Mat screenshot = reproject(node_to_intersect, position, planeA_coeffs, planeB_coeffs);
-		std::cout<<" done.\n";
-		//convert from vec4d to vector<double>
-		std::vector<double> planeA;
-		planeA.push_back(planeA_coeffs[0]);
-		planeA.push_back(planeA_coeffs[1]);
-		planeA.push_back(planeA_coeffs[2]);
-		planeA.push_back(planeA_coeffs[3]);
-		std::cout << "PlaneA coefficients: " << planeA[0] <<" "<< planeA[1] <<" "<< planeA[2] <<" "<< planeA[3] << std::endl;
-
-
-		std::vector<double> planeB;
-		planeB.push_back(planeB_coeffs[0]);
-		planeB.push_back(planeB_coeffs[1]);
-		planeB.push_back(planeB_coeffs[2]);
-		planeB.push_back(planeB_coeffs[3]); 
-		std::cout << "PlaneB coefficients: " << planeB[0] <<" "<< planeB[1] <<" "<< planeB[2] <<" "<< planeB[3] << std::endl;
-
-		std::cout << position << std::endl;
-
-		trans.makeLookAt(osg::Vec3d(0., position, -cameraZ), osg::Vec3d(0., position, 0.), osg::Vec3d(0.0, position - 100, 0.));
-
-		//VISUAL di prova NON SERVE
-	//	root->addChild(point_node);
-	//	osgViewer::Viewer viewosg;
-	//	viewosg.setSceneData(root.get());
-	//	viewosg.run();
-
-		//cv::Mat pippo = get_pic(point_node, trans);
-
-		std::stringstream ss;
-		ss << "../data/Mat_debug";
-		ss << position << ".bmp";
-		cv::imwrite(ss.str(), screenshot);
-
-		convert_to_3d(screenshot, planeA, planeB, cloud);
-
-		space_spanned = space_spanned + space_between_frame;
-		float progress = space_spanned / space_to_run * 100;
-		printf("\rCompletamento: %2.2f%%", progress);
 	}
 	
-	std::cout<<"Punti nella cloud "<<cloud->points.size()<<std::endl;
-	// visualizzazione
+	//////////////////////////////////////////////////////////////
+	// Ottenimento piani laser. Lavorando in coordinate della camera, i piani non cambiano mai equazioni, e possone essere calcolati una volta per tutte
+
+	// Tre punti per piano laser
+	osg::Vec3 a1(0,		laserDistance,	0 );
+	osg::Vec3 a2(0,		+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
+	osg::Vec3 a3(100,	+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
+	osg::Vec3 b1(0,		-laserDistance, 0);
+	osg::Vec3 b2(0,		-laserDistance + laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
+	osg::Vec3 b3(100,	+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
+
+	osg::Plane planeA(a1, a2, a3);
+	osg::Plane planeB(b1, b2, b3);
+	
+	// Ottenimento dei coefficienti dell'equazioni dei piani laser
+	osg::Vec4d planeA_coeffs = planeA.asVec4();
+	osg::Vec4d planeB_coeffs = planeB.asVec4();
+	//std::cout << "PlaneA coefficients calcolati una tantum: " << planeA_coeffs[0] << " " << planeA_coeffs[1] << " " << planeA_coeffs[2] << " " << planeA_coeffs[3] << std::endl;
+	//std::cout << "PlaneB coefficients calcolati una tantum: " << planeB_coeffs[0] << " " << planeB_coeffs[1] << " " << planeB_coeffs[2] << " " << planeB_coeffs[3] << std::endl;
+
+	// Conversione da vec4d to vector<double>
+	std::vector<double> planeCoeffA, planeCoeffB;
+	planeCoeffA.push_back(planeA_coeffs[0]);	planeCoeffB.push_back(planeB_coeffs[0]);
+	planeCoeffA.push_back(planeA_coeffs[1]);	planeCoeffB.push_back(planeB_coeffs[1]);
+	planeCoeffA.push_back(planeA_coeffs[2]);	planeCoeffB.push_back(planeB_coeffs[2]);
+	planeCoeffA.push_back(planeA_coeffs[3]);	planeCoeffB.push_back(planeB_coeffs[3]);
+
+	// Inizializzazione point cloud da riempire
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+
+	// Fase iterativa. Per ogni frame viene scansionata l'immagine e inseriti i punti nella PC
+	for (float position = minY; position <= maxY; position += space_between_frame) {
+
+		// Istruzioni per l'aggiornamento dello stato su console
+		float progress = ++iter / num_iterations * 100;
+		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", position, progress);
+
+		// Chiamata al metodo per ottenere le catture della macchina fotografica. Vengono forniti anche i piani.
+		cv::Mat screenshot = reproject(node_to_intersect, position) ;
+				
+		//std::stringstream ss;
+		//ss << "./exit/Mat_debug";
+		//ss << position << ".bmp";
+		//cv::imwrite(ss.str(), screenshot);
+
+		// Conversione dall'immagine allo spazio 3D
+		convert_to_3d(screenshot, position, planeCoeffA, planeCoeffB, cloud);
+	
+	}
+
+	// Visualizzazione finale della point cloud
+	std::cout << "Punti nella cloud " << cloud->points.size() << std::endl;
 	pcl::visualization::PCLVisualizer pcl_viewer("PCL Viewer");
 	pcl_viewer.addCoordinateSystem(0.1);
-	pcl_viewer.addPointCloud<pcl::PointXYZ>(cloud,"input_cloud");
-	pcl_viewer.setBackgroundColor(0.2,0.2,0.2);
+	pcl_viewer.addPointCloud<pcl::PointXYZ>(cloud, "input_cloud");
+	pcl_viewer.setBackgroundColor(0.2, 0.2, 0.2);
 	pcl_viewer.spin();
 
 	cout << "Exit program." << endl;
+	_waitKey();
 
 	return 0;
 
