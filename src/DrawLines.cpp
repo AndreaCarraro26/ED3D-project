@@ -3,10 +3,9 @@
 #include <osg/Geode>
 #include <osgViewer/Viewer>
 #include <osg/Geometry>
-#include <osg/Matrixd>
 
-#include <osgUtil/Optimizer>
-
+#include <osg/ComputeBoundsVisitor>
+#include <osg/MatrixTransform>
 
 // include STD
 #include <math.h>       /* sin */
@@ -59,7 +58,18 @@ int main()
 	std::cout << "Loading Model from Disk." << std::endl;
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
 	if(model) std::cout << "Model Loaded. " << std::endl;
-	root->addChild(model.get());
+
+	osg::ComputeBoundsVisitor cbbv;
+	model->accept(cbbv);
+	osg::BoundingBox bb = cbbv.getBoundingBox();
+	osg::Vec3 ModelSize = bb._max - bb._min;
+
+	// Il modello viene traslato in posizione centrale rispetto al sistema di riferimento 
+	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
+	node_to_intersect->setMatrix(osg::Matrix::translate(-bb.xMax()+(bb.xMax()-bb.xMin())/2, -bb.yMax() + (bb.yMax() - bb.yMin())/2, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
+	node_to_intersect->addChild(model.get());
+
+	root->addChild(node_to_intersect.get());
 
 	std::vector<osg::ref_ptr<osg::Vec3Array> > bundle, bundle2;	// Vettore contenente tutti i punti necessari a disegnare le rette del fascio
 	std::vector<osg::ref_ptr<osg::Geode> > bundleGeode, bundle2Geode;

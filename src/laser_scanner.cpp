@@ -13,10 +13,10 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
-#include <sstream>
+//#include <sstream>
 #include <vector>
 
-#include <pcl/point_types.h>
+//#include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>	
 
 int _waitKey() {
@@ -190,7 +190,7 @@ int main(int argc, char** argv)
 	pcl_viewer.spin();
 
 	cout << "Exit program." << endl;
-	_waitKey();
+	//_waitKey();
 
 	return 0;
 

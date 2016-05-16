@@ -3,31 +3,14 @@
 #include <math.h> 
 #include <vector>  
 
-#include <osgDB/ReadFile>
-
-#include <osgUtil/Optimizer>
-#include <osg/ComputeBoundsVisitor>
-#include <osgViewer/Viewer>
-#include <osg/MatrixTransform>
-
-#include <osg/ShapeDrawable>
-#include <osg/Geode>
-#include <osg/Geometry>
-#include <osg/Matrixd>
-#include <osg/Point>
-#include <osg/MatrixTransform>
-
-#include <osgUtil/Optimizer>
-#include <osgUtil/Optimizer>
 #include <osgUtil/LineSegmentIntersector>
 #include <osgUtil/IntersectionVisitor>
 
 #include <osgViewer/Viewer>
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/highgui/highgui.hpp"
+
 
 osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
 
