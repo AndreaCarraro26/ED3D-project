@@ -1,4 +1,4 @@
-#include "stdafx.h"
+//#include "stdafx.h"
 
 #include <osg/Group>
 #include <pcl/point_types.h>

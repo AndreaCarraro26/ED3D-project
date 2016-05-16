@@ -27,7 +27,7 @@ int main()
 	
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
-
+	std::string modelName; fs["model"] >> modelName;
 	int cameraX = 0;
 	float cameraY = 0;
 	int cameraZ;		fs["cameraHeight"] >> cameraZ;
@@ -57,8 +57,8 @@ int main()
 
 	// Caricamento del modello 
 	std::cout << "Loading Model from Disk." << std::endl;
-	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile("../data/bin1.stl");
-	std::cout << "Model Loaded. " << std::endl;
+	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
+	if(model) std::cout << "Model Loaded. " << std::endl;
 	root->addChild(model.get());
 
 	std::vector<osg::ref_ptr<osg::Vec3Array> > bundle, bundle2;	// Vettore contenente tutti i punti necessari a disegnare le rette del fascio
@@ -75,7 +75,7 @@ int main()
 	//for (float position = minY; position <= maxY; position += space_between_frame) {}
 	
 
-	int position=-200; //////overrrrride
+	int position=minY; //////overrrrride
 
 	cameraY=position;
 
@@ -122,10 +122,10 @@ int main()
 		bundleGeometry[i]->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
 		bundleGeometry[i]->addPrimitiveSet(new osg::DrawArrays(GL_LINES, 0, 2));
 		bundleGeode[i]->addDrawable(bundleGeometry[i].get());
-		//bundleNode->addChild(bundleGeode[i].get());
+		bundleNode->addChild(bundleGeode[i].get());
 		
 		
-
+/*
 		// costruzione dell'intersector
 		intersector = new osgUtil::LineSegmentIntersector(source, end);
 		iv.setIntersector(intersector.get());
@@ -137,7 +137,7 @@ int main()
 				std::cout << point[0] << " " << point[1] << " " << point[2] << " " << actualAngle << std::endl;
 			}
 		}
-
+*/
 
 		//2
 		bundle2.push_back(new osg::Vec3Array);
@@ -160,8 +160,8 @@ int main()
 		bundle2Geometry[i]->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
 		bundle2Geometry[i]->addPrimitiveSet(new osg::DrawArrays(GL_LINES, 0, 2));
 		bundle2Geode[i]->addDrawable(bundle2Geometry[i].get());
-		//bundle2Node->addChild(bundle2Geode[i].get());
-		
+		bundle2Node->addChild(bundle2Geode[i].get());
+		/*
 		intersector = new osgUtil::LineSegmentIntersector(source2, end);
 		iv.setIntersector(intersector.get());
 		iv.apply(*model.get());
@@ -169,11 +169,11 @@ int main()
 			point = intersector->getFirstIntersection().getWorldIntersectPoint();
 			if (point[2]<500 && point[2]>200)
 				inter_points2->push_back(point);
-		}
+		}*/
 		actualAngle += minAngle;
 
 	}
-
+/*
 	osg::ref_ptr<osg::Geode> interGeode = new osg::Geode();
 	osg::ref_ptr<osg::Geometry> interGeometry = new osg::Geometry();
 
@@ -194,20 +194,11 @@ int main()
 	inter2Geometry->setColorArray(color.get());
 	inter2Geometry->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
 	inter2Geometry->addPrimitiveSet(new osg::DrawArrays(GL_LINE_STRIP, 0, inter_points2.get()->getNumElements()));
-
+*/
 
 	
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(root.get());
-	//viewer.getCamera()->setProjectionMatrix(frustum); 
-
-	// Create a matrix to specify a distance from the viewpoint.
-	osg::Matrix trans;
-	trans.makeTranslate(0., 0., -cameraZ);
-	// Rotation angle (in radians)
-	float angle(0.);
-
-	viewer.getCamera()->setViewMatrix(trans);
 	viewer.run();
 	
 
