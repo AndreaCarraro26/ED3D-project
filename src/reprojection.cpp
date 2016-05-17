@@ -1,10 +1,12 @@
 //#include "stdafx.h"
 
 #include <math.h> 
-#include <vector>  
+#include <vector> 
+#include <iostream>
 
 #include <osgUtil/LineSegmentIntersector>
 #include <osgUtil/IntersectionVisitor>
+#include <osg/ComputeBoundsVisitor>
 
 #include <osgViewer/Viewer>
 
@@ -12,7 +14,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 
 
-osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 center, osg::ref_ptr<osg::Node> model) {
+osg::Vec3 getInter(double angle, int laserLength, osg::Vec3& source, osg::Vec3& center, osg::ref_ptr<osg::Node> model) {
 
 	float X;
 
@@ -25,7 +27,6 @@ osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 ce
 	osg::Vec3 end(X, Y, Z);
 
 	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector = new osgUtil::LineSegmentIntersector(source, end);
-	//intersector->setIntersectionLimit(osgUtil::Intersector::LIMIT_NEAREST);
 	osgUtil::IntersectionVisitor iv(intersector.get());
 	iv.apply(*model.get());
 
@@ -35,6 +36,22 @@ osg::Vec3 getInter(double angle, int laserLength, osg::Vec3 source, osg::Vec3 ce
 	}
 
 	return osg::Vec3(0.0, 0.0, 0.0);
+}
+
+bool checkCameraVisibility(osg::Vec3& cameraPos, osg::Vec3& point, osg::ref_ptr<osg::Node> model) {
+
+	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector = new osgUtil::LineSegmentIntersector(cameraPos, point);
+	osgUtil::IntersectionVisitor iv(intersector.get());
+	iv.apply(*model.get());
+
+	if (intersector->containsIntersections()) {
+		osg::Vec3 viewBlock = intersector->getFirstIntersection().getLocalIntersectPoint();
+		if (abs(viewBlock.z()-point.z())>1)
+		return false; 
+	else
+		return true;
+	} else 
+		return true;
 }
 
 
@@ -51,9 +68,9 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
 	float fanLaser;	fs["fanLaser"] >> fanLaser;
 
-	int cameraX = 0;
+
 	float cameraY = positionY;
-	int cameraZ;		fs["cameraHeight"] >> cameraZ;
+	int cameraHeight;		fs["cameraHeight"] >> cameraHeight;
 	double laserLength;	fs["laserLength"] >> laserLength;
 	
 	int	laserDistance;	fs["laserDistance"] >> laserDistance;
@@ -82,13 +99,20 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	intrinsic.at<double>(2, 2) = 1;
 
 	float minAngle = fanLaser / numLaser;
-		
-	osg::ref_ptr<osg::Group> root;
+	
+
+	osg::ComputeBoundsVisitor cbbv;
+	model->accept(cbbv);
+	osg::BoundingBox bb = cbbv.getBoundingBox();
+	
+	int cameraX = (int) (bb.xMax() + bb.xMin())/2;
+	int cameraZ = (int) bb.zMin() + cameraHeight;
 
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
 
+	
 	osg::Vec3 point;
 	cv::Vec3f pointCV;
 
@@ -115,13 +139,14 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	osg::Vec3 center2(center2X, center2Y, center2Z);
 
 	osg::Vec3 null(0.0, 0.0, 0.0);
+	osg::Vec3 cameraPos(cameraX, cameraY, cameraZ);
 
 	for (actualAngle; actualAngle <= fanLaser / 2; actualAngle += minAngle) {
 
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
 		point = getInter(deg2rad*actualAngle, laserLength, source, center, model);
-		if (point != null) {
+		if (point != null && checkCameraVisibility(cameraPos, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -131,7 +156,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 		
 		// intersezioni del secondo laser
 		point = getInter(deg2rad*actualAngle, laserLength, source2, center2, model);
-		if (point != null) {
+		if (point != null && checkCameraVisibility(cameraPos, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -168,10 +193,11 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	for (int i = 0; i < imagePoints.size(); i++) {
 		x = imagePoints[i][0];
 		y = imagePoints[i][1];
+		//std::cout<<"coordinate 2d: "<<x<<"\t"<<y<<std::endl;
 		if (0<((int)x) && ((int)x) < width && 0<((int)y) && ((int)y) < height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
-		}
+		} 
 	}
 
 	return image_to_return;

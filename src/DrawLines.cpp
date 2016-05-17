@@ -5,8 +5,7 @@
 #include <osg/Geometry>
 
 #include <osg/ComputeBoundsVisitor>
-#include <osg/MatrixTransform>
-
+#include <osg/Point>
 // include STD
 #include <math.h>       /* sin */
 #include <vector>  //for std::vector
@@ -27,9 +26,8 @@ int main()
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
 	std::string modelName; fs["model"] >> modelName;
-	int cameraX = 0;
-	float cameraY = 0;
-	int cameraZ;		fs["cameraHeight"] >> cameraZ;
+
+	int cameraHeight;		fs["cameraHeight"] >> cameraHeight;
 	int laserLength;	fs["laserLength"] >> laserLength;
 	int	laserDistance;	fs["laserDistance"] >> laserDistance;
 	int minY; 			fs["minY"] >> minY;
@@ -63,21 +61,23 @@ int main()
 	model->accept(cbbv);
 	osg::BoundingBox bb = cbbv.getBoundingBox();
 	osg::Vec3 ModelSize = bb._max - bb._min;
+	std::cout << "Dimensioni del modello:" << std::endl;
+	std::cout << "\tx_min: " << bb.xMin() << " x_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
+	std::cout << "\ty_min: " << bb.yMin() << " y_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
+	std::cout << "\tz_min: " << bb.zMin() << " z_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
 
-	// Il modello viene traslato in posizione centrale rispetto al sistema di riferimento 
-	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
-	node_to_intersect->setMatrix(osg::Matrix::translate(-bb.xMax()+(bb.xMax()-bb.xMin())/2, -bb.yMax() + (bb.yMax() - bb.yMin())/2, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
-	node_to_intersect->addChild(model.get());
+	int cameraX = (int) (bb.xMax() + bb.xMin())/2; std::cout<< "X=" << cameraX <<std::endl;
+	int cameraZ = (int) bb.zMin() + cameraHeight; 
 
-	root->addChild(node_to_intersect.get());
+	//root->addChild(model.get());
 
 	std::vector<osg::ref_ptr<osg::Vec3Array> > bundle, bundle2;	// Vettore contenente tutti i punti necessari a disegnare le rette del fascio
 	std::vector<osg::ref_ptr<osg::Geode> > bundleGeode, bundle2Geode;
 	std::vector<osg::ref_ptr<osg::Geometry> > bundleGeometry, bundle2Geometry;
 
 	osg::ref_ptr<osg::Group> bundleNode = new osg::Group, bundle2Node = new osg::Group;
-	root->addChild(bundleNode.get());
-	root->addChild(bundle2Node.get());
+	//root->addChild(bundleNode.get());			//verso il meno
+	//root->addChild(bundle2Node.get());		//verso il più
 
 	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector;
 	osgUtil::IntersectionVisitor iv;
@@ -85,9 +85,9 @@ int main()
 	//for (float position = minY; position <= maxY; position += space_between_frame) {}
 	
 
-	int position=minY; //////overrrrride
+	int position=0; //////overrrrride
 
-	cameraY=position;
+	int cameraY=position;
 
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
@@ -135,19 +135,19 @@ int main()
 		bundleNode->addChild(bundleGeode[i].get());
 		
 		
-/*
+
 		// costruzione dell'intersector
 		intersector = new osgUtil::LineSegmentIntersector(source, end);
 		iv.setIntersector(intersector.get());
 		iv.apply(*model.get());
 		if (intersector->containsIntersections()) {
 			point = intersector->getFirstIntersection().getLocalIntersectPoint();
-			if (point[2]<500 && point[2]>200) {
+			if (true) {
 				inter_points->push_back(point);
 				std::cout << point[0] << " " << point[1] << " " << point[2] << " " << actualAngle << std::endl;
 			}
 		}
-*/
+
 
 		//2
 		bundle2.push_back(new osg::Vec3Array);
@@ -171,26 +171,27 @@ int main()
 		bundle2Geometry[i]->addPrimitiveSet(new osg::DrawArrays(GL_LINES, 0, 2));
 		bundle2Geode[i]->addDrawable(bundle2Geometry[i].get());
 		bundle2Node->addChild(bundle2Geode[i].get());
-		/*
+		
 		intersector = new osgUtil::LineSegmentIntersector(source2, end);
 		iv.setIntersector(intersector.get());
 		iv.apply(*model.get());
 		if (intersector->containsIntersections()) {
 			point = intersector->getFirstIntersection().getWorldIntersectPoint();
-			if (point[2]<500 && point[2]>200)
+			if (true)
 				inter_points2->push_back(point);
-		}*/
+		}
 		actualAngle += minAngle;
 
 	}
-/*
+
 	osg::ref_ptr<osg::Geode> interGeode = new osg::Geode();
 	osg::ref_ptr<osg::Geometry> interGeometry = new osg::Geometry();
 
 	interGeometry->setVertexArray(inter_points.get());
 	interGeometry->setColorArray(color.get());
 	interGeometry->setColorBinding(osg::Geometry::BIND_PER_VERTEX);
-	interGeometry->addPrimitiveSet(new osg::DrawArrays(GL_LINE_STRIP, 0, inter_points.get()->getNumElements()));
+	interGeometry->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, inter_points.get()->getNumElements()));
+	interGeometry->getOrCreateStateSet()->setAttribute(new osg::Point(3.0f), osg::StateAttribute::ON);
 
 	interGeode->addDrawable(interGeometry.get());
 	root->addChild(interGeode.get());
@@ -203,8 +204,8 @@ int main()
 	inter2Geometry->setVertexArray(inter_points2.get());
 	inter2Geometry->setColorArray(color.get());
 	inter2Geometry->setColorBinding(osg::Geometry::BIND_PER_PRIMITIVE_SET);
-	inter2Geometry->addPrimitiveSet(new osg::DrawArrays(GL_LINE_STRIP, 0, inter_points2.get()->getNumElements()));
-*/
+	inter2Geometry->addPrimitiveSet(new osg::DrawArrays(GL_POINTS, 0, inter_points2.get()->getNumElements()));
+	inter2Geometry->getOrCreateStateSet()->setAttribute(new osg::Point(3.0f), osg::StateAttribute::ON);
 
 	
 	osgViewer::Viewer viewer;

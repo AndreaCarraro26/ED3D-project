@@ -6,17 +6,13 @@
 
 #include <osgUtil/Optimizer>
 #include <osg/ComputeBoundsVisitor>
-#include <osgViewer/Viewer>
-#include <osg/MatrixTransform>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <iostream>
-//#include <sstream>
 #include <vector>
 
-//#include <pcl/point_types.h>
 #include <pcl/visualization/pcl_visualizer.h>	
 
 int _waitKey() {
@@ -39,23 +35,22 @@ int main(int argc, char** argv)
 	fs.open(confFile, cv::FileStorage::READ);
 	double deg2rad = 2 * 3.1416 / 360;
 
-	std::string modelName; fs["model"] >> modelName;
+	std::string modelName; 	fs["model"] >> modelName;
 
-	float cameraX = 0;	// Posizione X e Y del setting non modificabili 
-	float cameraZ;		fs["cameraHeight"] >> cameraZ;
+	float cameraHeight;			fs["cameraHeight"] >> cameraHeight;
 
-	int	alphaLaser;		fs["alphaLaser"] >> alphaLaser;
-	float	laserDistance;	fs["laserDistance"] >> laserDistance;
-	float laserLength;	fs["laserLength"] >> laserLength;
+	int	alphaLaser;			fs["alphaLaser"] >> alphaLaser;
+	float laserDistance;	fs["laserDistance"] >> laserDistance;
+	float laserLength;		fs["laserLength"] >> laserLength;
 
 	bool ignoreHeight;		fs["ignoreHeight"] >> ignoreHeight;
-	bool useBounds;		fs["useBounds"] >> useBounds;
-	int minY;			fs["minY"] >> minY;
-	int maxY;			fs["maxY"] >> maxY;
+	bool useBounds;			fs["useBounds"] >> useBounds; // Se true usa il range letto, altrimenti calcola quello ottimale
+	int minY;				fs["minY"] >> minY;
+	int maxY;				fs["maxY"] >> maxY;
 
-	int scanSpeed;		fs["scanSpeed"] >> scanSpeed;
-	int fpsCam;			fs["fpsCam"] >> fpsCam;
-	float fanLaser;		fs["fanLaser"] >> fanLaser;
+	int scanSpeed;			fs["scanSpeed"] >> scanSpeed;
+	int fpsCam;				fs["fpsCam"] >> fpsCam;
+	float fanLaser;			fs["fanLaser"] >> fanLaser;
 
 	float time_between_frame = 1.0 / fpsCam;	// in secondi
 	float space_between_frame = time_between_frame*scanSpeed; // in millimetri
@@ -69,7 +64,7 @@ int main(int argc, char** argv)
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
 	if (!model)
 	{
-		std::cout << "Nessuno modello trovato con quel nome." << std::endl;
+		std::cout << "Nessun modello trovato con quel nome." << std::endl;
 		_waitKey();
 		return 1;
 	}
@@ -85,6 +80,11 @@ int main(int argc, char** argv)
 	osg::BoundingBox bb = cbbv.getBoundingBox();
 	osg::Vec3 ModelSize = bb._max - bb._min;
 
+	std::cout << "Dimensioni del modello:" << std::endl;
+	std::cout << "\tx_min: " << bb.xMin() << " x_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
+	std::cout << "\ty_min: " << bb.yMin() << " y_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
+	std::cout << "\tz_min: " << bb.zMin() << " z_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
+/*
 	// Il modello viene traslato in posizione centrale rispetto al sistema di riferimento 
 	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
 	node_to_intersect->setMatrix(osg::Matrix::translate(-bb.xMax()+(bb.xMax()-bb.xMin())/2, -bb.yMax() + (bb.yMax() - bb.yMin())/2, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
@@ -96,14 +96,13 @@ int main(int argc, char** argv)
 	osg::BoundingBox bbx = cbbx.getBoundingBox();
 	ModelSize = bbx._max - bbx._min;
 
-	std::cout << "Dimensioni del modello:" << std::endl;
-	std::cout << "\tx_min: " << bbx.xMin() << " x_max: " << bbx.xMax() << " x: " << ModelSize[0] << "mm" << std::endl;
-	std::cout << "\ty_min: " << bbx.yMin() << " y_max: " << bbx.yMax() << " y: " << ModelSize[1] << "mm" << std::endl;
-	std::cout << "\tz_min: " << bbx.zMin() << " z_max: " << bbx.zMax() << " z: " << ModelSize[2] << "mm" << std::endl;
+*/
+	//impostazione posizione iniziale della telecamera
+	int cameraZ = (int) bb.zMin() + cameraHeight; 
 
-	if (!useBounds) {		// Se impostato nella configurazione, permette la scansione solo in un range prestabilito
-		minY = bbx.yMin() - cameraZ*tan(deg2rad*(90 - alphaLaser)) + laserDistance;
-		maxY = bbx.yMax() + cameraZ*tan(deg2rad*(90 - alphaLaser)) - laserDistance;
+	if (!useBounds) {	
+		minY = bb.yMin() - cameraHeight*tan(deg2rad*(90 - alphaLaser)) + laserDistance;
+		maxY = bb.yMax() + cameraHeight*tan(deg2rad*(90 - alphaLaser)) - laserDistance;
 	}
 
 	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
@@ -119,20 +118,24 @@ int main(int argc, char** argv)
 
 	// Calcolo l'altezza del punto di intersezione dei piani laser. 
 	float z_intersection = cameraZ - laserDistance*tan(deg2rad*alphaLaser);
-	if (z_intersection <= bbx.zMax()) {
+	if (z_intersection <= bb.zMax()) {
 		std::cout << "ATTENZIONE: l'altezza dei punti di intersezione tra i due piani laser " << std::endl;
 		std::cout << "^^^^^^^^^^  e' inferiore all'altezza massima del modello caricato." << std::endl;
-		std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema camera/laser di almeno " << ceil(bbx.zMax() - z_intersection) << "mm." << std::endl;
+		std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema camera/laser di almeno " 
+					<< ceil(bb.zMax() - z_intersection) << "mm." << std::endl;
+
 		if (!ignoreHeight) {
 			_waitKey();
 			return 1;
 		}
-		else std::cout << "La scansione viene eseguita ignorando il suggerimento. " << std::endl;
+		else 
+			std::cout << "La scansione viene eseguita ignorando il suggerimento. " << std::endl;
 		
 	}
 	
 	//////////////////////////////////////////////////////////////
-	// Ottenimento piani laser. Lavorando in coordinate della camera, i piani non cambiano mai equazioni, e possone essere calcolati una volta per tutte
+	// Ottenimento piani laser. Nel sistema di riferimento della telecamera, i piani non cambiano mai equazione 
+	// e possono quindi essere calcolati una volta per tutte
 
 	// Tre punti per piano laser
 	osg::Vec3 a1(0,		laserDistance,	0 );
@@ -169,7 +172,7 @@ int main(int argc, char** argv)
 		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", position, progress);
 
 		// Chiamata al metodo per ottenere le catture della macchina fotografica. Vengono forniti anche i piani.
-		cv::Mat screenshot = reproject(node_to_intersect, position) ;
+		cv::Mat screenshot = reproject(model, position) ;
 				
 		//std::stringstream ss;
 		//ss << "./exit/Mat_debug";
