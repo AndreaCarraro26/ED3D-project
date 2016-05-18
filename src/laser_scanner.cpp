@@ -31,48 +31,8 @@ int main(int argc, char** argv)
 	/////////////////////////////////////////////////////////////////////////////////////
 	
 	// lettura dei dati di configurazione
-	std::string confFile = "../data/Configuration.xml";
-	cv::FileStorage fs;
-	fs.open(confFile, cv::FileStorage::READ);
-
-	struct Configuration confData; //struct contentente tutti i dati di configurazione
+		
 	double deg2rad = 2 * 3.1416 / 360;
-
-	std::string modelName;
-	fs["model"] >> modelName;
-
-	fs["cameraHeight"] >> confData.cameraHeight;
-
-	fs["alphaLaser"] >> confData.alphaLaser;
-	fs["laserDistance"] >> confData.laserDistance;
-	confData.laserLength = confData.cameraHeight/cos(deg2rad*confData.alphaLaser);
-	
-	fs["ignoreHeight"] >> confData.ignoreHeight;
-	fs["useBounds"] >> confData.useBounds; // Se true usa il range letto, altrimenti calcola quello ottimale
-	fs["minY"] >> confData.minY;
-	fs["maxY"] >> confData.maxY;
-
-	fs["scanSpeed"] >> confData.scanSpeed;
-	fs["fpsCam"] >> confData.fpsCam;
-	fs["fanLaser"] >> confData.fanLaser;
-	fs["numLaser"] >> confData.numLaser;
-
-	fs["sensor_f_x"] >> confData.f_x;
-	fs["sensor_f_y"] >> confData.f_y;
-	fs["sensor_x_0"] >> confData.x_0;
-	fs["sensor_y_0"] >> confData.y_0;
-
-	fs["sensor_width"] >> confData.sensor_width;
-	fs["sensor_height"] >> confData.sensor_height;
-
-	fs["roi_height"] >> confData.roi_height;
-	fs["roi_y_1"] >> confData.roi_y_1; 
-	fs["roi_y_2"] >> confData.roi_y_2; 
-	
-	fs.release();
-
-	/////////////////////////////////////////////////////////////////////////////////////////
-
 	// Caricamento del modello
 	std::cout << "Caricamento del modello \"" << modelName << "\"...";
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
@@ -95,9 +55,9 @@ int main(int argc, char** argv)
 	osg::Vec3 ModelSize = bb._max - bb._min;
 
 	std::cout << "Dimensioni del modello:" << std::endl;
-	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
-	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
-	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
+	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\t\tx: " << ModelSize[0] << "mm" << std::endl;
+	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\t\ty: " << ModelSize[1] << "mm" << std::endl;
+	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << ModelSize[2] << "mm" << std::endl;
 
 	//impostazione posizione iniziale della telecamera
 	int cameraZ = (int) bb.zMin() + confData.cameraHeight; 
@@ -117,7 +77,7 @@ int main(int argc, char** argv)
 
 	/////////////////////////////////////////////////////////////
 
-/*	// Calcolo l'altezza del punto di intersezione dei piani laser. 
+	// Calcolo l'altezza del punto di intersezione dei piani laser. 
 	float z_intersection = cameraZ - confData.laserDistance*tan(deg2rad*confData.alphaLaser);
 	if (z_intersection <= bb.zMax()) {
 		std::cout << "ATTENZIONE: l'altezza dei punti di intersezione tra i due piani laser " << std::endl;
@@ -139,7 +99,7 @@ int main(int argc, char** argv)
 					return 1;
 				}
 		}
-	}*/
+	}
 	//////////////////////////////////////////////////////////////
 	// Ottenimento piani laser. Nel sistema di riferimento della telecamera, i piani non cambiano mai equazione 
 	// e possono quindi essere calcolati una volta per tutte
