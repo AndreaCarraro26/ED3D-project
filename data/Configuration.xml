@@ -7,13 +7,13 @@
 	<laserDistance> 800 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
 	<numLaser> 100	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
 	
-	<useBounds> 0 </useBounds>		<!-- Usa i limiti definiti sotto, altrimenti scansiona tutto il modello -->
-	<minY>-400</minY>			
-	<maxY>400</maxY>
+	<useBounds> 1 </useBounds>		<!-- Usa i limiti definiti sotto, altrimenti scansiona tutto il modello -->
+	<minY>-200</minY>			
+	<maxY>200</maxY>
 	
 	<scanSpeed>1000 </scanSpeed>	<!-- Valori 100 mm/s – 1000 mm/s -->
 	<fpsCam>100	 </fpsCam>	<!-- Valori 100 fps – 500 fps -->
-	<alphaLaser> 65 </alphaLaser>	<!-- Valori 60° - 70° -->
+	<alphaLaser> 70 </alphaLaser>	<!-- Valori 60° - 70° -->
 	<fanLaser> 45 </fanLaser>	<!-- Valori 30° - 45° -->
 	
 	<!-- Dati del sensore della camera-->

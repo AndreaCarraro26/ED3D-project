@@ -7,8 +7,41 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node>, float, osg::Vec4d*, osg::Vec4d*);
-void convert_to_3d (cv::Mat, double, std::vector<double> , std::vector<double> , pcl::PointCloud<pcl::PointXYZ>::Ptr );
-cv::Mat get_pic(osg::ref_ptr<osg::Geode>, osg::Matrix &);
-cv::Mat reproject(osg::ref_ptr<osg::Node>, float);
+struct Configuration {
+
+	float cameraHeight;
+	float alphaLaser;
+	float fanLaser;
+	float laserDistance;
+	float laserLength;
+	int numLaser;
+	
+	bool ignoreHeight;
+	bool useBounds;
+	int minY;
+	int maxY;
+
+	int scanSpeed;	
+	int fpsCam;
+
+	osg::Vec3 cameraPos;
+
+	int sensor_width;			
+	int sensor_height;		
+
+	double f_x;
+	double f_y;
+	double x_0;
+	double y_0;
+	
+	int roi_height;
+	int roi_y_1; 
+	int roi_y_2;
+	
+};
+
+//osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node>, float, osg::Vec4d*, osg::Vec4d*);
+void convert_to_3d (cv::Mat, Configuration, std::vector<double> , std::vector<double> , pcl::PointCloud<pcl::PointXYZ>::Ptr );
+//cv::Mat get_pic(osg::ref_ptr<osg::Geode>, osg::Matrix &);
+cv::Mat reproject(osg::ref_ptr<osg::Node>, Configuration);
 	

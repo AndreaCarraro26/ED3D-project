@@ -1,5 +1,7 @@
 //#include "stdafx.h"
 
+#include "laser_scanner.h"
+
 #include <math.h> 
 #include <vector> 
 #include <iostream>
@@ -55,58 +57,28 @@ bool checkCameraVisibility(osg::Vec3& cameraPos, osg::Vec3& point, osg::ref_ptr<
 }
 
 
-cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{ 
+cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{ 
 
 	////////////////////////////////////////////////////////////////
-	// ottenimento dei dati dal file di configurazione
-	std::string confFile = "../data/Configuration.xml";
-	cv::FileStorage fs;
-	fs.open(confFile, cv::FileStorage::READ);
-	double deg2rad = 2 * 3.1416 / 360;
-
-	int numLaser;	fs["numLaser"] >> numLaser;
-	int alphaLaser; fs["alphaLaser"] >> alphaLaser;
-	float fanLaser;	fs["fanLaser"] >> fanLaser;
-
-
-	float cameraY = positionY;
-	int cameraHeight;		fs["cameraHeight"] >> cameraHeight;
-	double laserLength;	fs["laserLength"] >> laserLength;
-	
-	int	laserDistance;	fs["laserDistance"] >> laserDistance;
-
-	double f_x;			fs["sensor_f_x"] >> f_x;
-	double f_y;			fs["sensor_f_y"] >> f_y;
-	double x_0;			fs["sensor_x_0"] >> x_0;
-	double y_0;			fs["sensor_y_0"] >> y_0;
-
-	int width;			fs["sensor_width"] >> width;
-	int height;			fs["sensor_height"] >> height;
-
-	fs.release();
 
 	cv::Mat intrinsic(3, 3, CV_64FC1);
 
 	// Popolamento della matrice degli intrinsici
-	intrinsic.at<double>(0, 0) = f_x;
+	intrinsic.at<double>(0, 0) = params.f_x;
 	intrinsic.at<double>(0, 1) = 0;
-	intrinsic.at<double>(0, 2) = x_0;
+	intrinsic.at<double>(0, 2) = params.x_0;
 	intrinsic.at<double>(1, 0) = 0;
-	intrinsic.at<double>(1, 1) = f_y;
-	intrinsic.at<double>(1, 2) = y_0;
+	intrinsic.at<double>(1, 1) = params.f_y;
+	intrinsic.at<double>(1, 2) = params.y_0;
 	intrinsic.at<double>(2, 0) = 0;
 	intrinsic.at<double>(2, 1) = 0;
 	intrinsic.at<double>(2, 2) = 1;
 
-	float minAngle = fanLaser / numLaser;
 	
-
-	osg::ComputeBoundsVisitor cbbv;
-	model->accept(cbbv);
-	osg::BoundingBox bb = cbbv.getBoundingBox();
 	
-	int cameraX = (int) (bb.xMax() + bb.xMin())/2;
-	int cameraZ = (int) bb.zMin() + cameraHeight;
+	float cameraX = params.cameraPos.x();
+	float cameraY = params.cameraPos.y();								//OCCHIO CHE SAREBBERO DOUBLE, SPERIAMO NON FACCIA CASINI
+	float cameraZ = params.cameraPos.z();
 
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
@@ -115,38 +87,42 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	
 	osg::Vec3 point;
 	cv::Vec3f pointCV;
+	float deg2rad = 2*3.1416/360;
 
 	// array per i punti, ma std
 	std::vector<cv::Vec3f> intersection_points;
 	
 	// angolo iniziale di disegno del laser
-	float actualAngle = -fanLaser / 2;
+	float actualAngle = -params.fanLaser / 2;
+	float minAngle = params.fanLaser / params.numLaser;
+
 	// definizione del punto di applicazione del fascio
-	float laserX = cameraX, laserY = cameraY + laserDistance, laserZ = cameraZ;
+	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);
+
 	// definizione del punto di arrivo del raggio centrale
 	float centerX = laserX;
-	float centerY = laserY - laserLength*sin(deg2rad*(90 - alphaLaser));
-	float centerZ = laserZ - laserLength*cos(deg2rad*(90 - alphaLaser));
+	float centerY = laserY - params.laserLength*sin(deg2rad*(90 - params.alphaLaser));
+	float centerZ = laserZ - params.laserLength*cos(deg2rad*(90 - params.alphaLaser));
 	osg::Vec3 center(centerX, centerY, centerZ);
 
 	// stesso procedimento gi� visto, applicato al secondo laser
-	float laser2X = cameraX, laser2Y = cameraY - laserDistance, laser2Z = cameraZ;
+	float laser2X = cameraX, laser2Y = cameraY - params.laserDistance, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
+	
 	float center2X = laser2X;
-	float center2Y = laser2Y + laserLength*sin(deg2rad*(90 - alphaLaser));
-	float center2Z = laser2Z - laserLength*cos(deg2rad*(90 - alphaLaser));
+	float center2Y = laser2Y + params.laserLength*sin(deg2rad*(90 - params.alphaLaser));
+	float center2Z = laser2Z - params.laserLength*cos(deg2rad*(90 - params.alphaLaser));
 	osg::Vec3 center2(center2X, center2Y, center2Z);
 
 	osg::Vec3 null(0.0, 0.0, 0.0);
-	osg::Vec3 cameraPos(cameraX, cameraY, cameraZ);
 
-	for (actualAngle; actualAngle <= fanLaser / 2; actualAngle += minAngle) {
+	for (actualAngle; actualAngle <= params.fanLaser / 2; actualAngle += minAngle) {
 
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
-		point = getInter(deg2rad*actualAngle, laserLength, source, center, model);
-		if (point != null && checkCameraVisibility(cameraPos, point, model)) {
+		point = getInter(deg2rad*actualAngle, params.laserLength, source, center, model);
+		if (point != null && checkCameraVisibility(params.cameraPos, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -155,8 +131,8 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 		}
 		
 		// intersezioni del secondo laser
-		point = getInter(deg2rad*actualAngle, laserLength, source2, center2, model);
-		if (point != null && checkCameraVisibility(cameraPos, point, model)) {
+		point = getInter(deg2rad*actualAngle, params.laserLength, source2, center2, model);
+		if (point != null && checkCameraVisibility(params.cameraPos, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -181,7 +157,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 	distCoeffs.at<double>(4) = 0;
 
 	std::vector<cv::Vec2f> imagePoints;	
-	cv::Mat image_to_return(height, width, CV_8UC1);
+	cv::Mat image_to_return(params.sensor_height, params.sensor_width, CV_8UC1);
 	image_to_return.setTo(0);
 
 	if (intersection_points.size()!=0)
@@ -194,7 +170,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, float positionY)	{
 		x = imagePoints[i][0];
 		y = imagePoints[i][1];
 		//std::cout<<"coordinate 2d: "<<x<<"\t"<<y<<std::endl;
-		if (0<((int)x) && ((int)x) < width && 0<((int)y) && ((int)y) < height) {
+		if (0<((int)x) && ((int)x) < params.sensor_width && 0<((int)y) && ((int)y) < params.sensor_height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
 		} 

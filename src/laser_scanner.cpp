@@ -29,32 +29,45 @@ int _waitKey() {
 int main(int argc, char** argv)
 {
 	/////////////////////////////////////////////////////////////////////////////////////
+	
 	// lettura dei dati di configurazione
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
+
+	struct Configuration confData; //struct contentente tutti i dati di configurazione
 	double deg2rad = 2 * 3.1416 / 360;
 
-	std::string modelName; 	fs["model"] >> modelName;
+	std::string modelName;
+	fs["model"] >> modelName;
 
-	float cameraHeight;			fs["cameraHeight"] >> cameraHeight;
+	fs["cameraHeight"] >> confData.cameraHeight;
 
-	int	alphaLaser;			fs["alphaLaser"] >> alphaLaser;
-	float laserDistance;	fs["laserDistance"] >> laserDistance;
-	float laserLength;		fs["laserLength"] >> laserLength;
+	fs["alphaLaser"] >> confData.alphaLaser;
+	fs["laserDistance"] >> confData.laserDistance;
+	confData.laserLength = confData.cameraHeight/cos(deg2rad*confData.alphaLaser);
+	
+	fs["ignoreHeight"] >> confData.ignoreHeight;
+	fs["useBounds"] >> confData.useBounds; // Se true usa il range letto, altrimenti calcola quello ottimale
+	fs["minY"] >> confData.minY;
+	fs["maxY"] >> confData.maxY;
 
-	bool ignoreHeight;		fs["ignoreHeight"] >> ignoreHeight;
-	bool useBounds;			fs["useBounds"] >> useBounds; // Se true usa il range letto, altrimenti calcola quello ottimale
-	int minY;				fs["minY"] >> minY;
-	int maxY;				fs["maxY"] >> maxY;
+	fs["scanSpeed"] >> confData.scanSpeed;
+	fs["fpsCam"] >> confData.fpsCam;
+	fs["fanLaser"] >> confData.fanLaser;
 
-	int scanSpeed;			fs["scanSpeed"] >> scanSpeed;
-	int fpsCam;				fs["fpsCam"] >> fpsCam;
-	float fanLaser;			fs["fanLaser"] >> fanLaser;
+	fs["sensor_f_x"] >> confData.f_x;
+	fs["sensor_f_y"] >> confData.f_y;
+	fs["sensor_x_0"] >> confData.x_0;
+	fs["sensor_y_0"] >> confData.y_0;
 
-	float time_between_frame = 1.0 / fpsCam;	// in secondi
-	float space_between_frame = time_between_frame*scanSpeed; // in millimetri
+	fs["sensor_width"] >> confData.sensor_width;
+	fs["sensor_height"] >> confData.sensor_height;
 
+	fs["roi_height"] >> confData.roi_height;
+	fs["roi_y_1"] >> confData.roi_y_1; 
+	fs["roi_y_2"] >> confData.roi_y_2; 
+	
 	fs.release();
 
 	/////////////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +81,7 @@ int main(int argc, char** argv)
 		_waitKey();
 		return 1;
 	}
-	std::cout << "OK " << std::endl;
+	std::cout << " OK" << std::endl;
 
 	// Ottimizzazione della mesh
 	osgUtil::Optimizer optimizer;
@@ -84,66 +97,73 @@ int main(int argc, char** argv)
 	std::cout << "\tx_min: " << bb.xMin() << " x_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
 	std::cout << "\ty_min: " << bb.yMin() << " y_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
 	std::cout << "\tz_min: " << bb.zMin() << " z_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
-/*
-	// Il modello viene traslato in posizione centrale rispetto al sistema di riferimento 
-	osg::ref_ptr<osg::MatrixTransform> node_to_intersect = new osg::MatrixTransform;
-	node_to_intersect->setMatrix(osg::Matrix::translate(-bb.xMax()+(bb.xMax()-bb.xMin())/2, -bb.yMax() + (bb.yMax() - bb.yMin())/2, -bb.zMin()));	// traslazione del modello per imporre che poggi sul piano 0
-	node_to_intersect->addChild(model.get());
 
-	// Riottenimento delle dimensioni del modello e visualizzazione  
-	osg::ComputeBoundsVisitor cbbx;
-	node_to_intersect->accept(cbbx);
-	osg::BoundingBox bbx = cbbx.getBoundingBox();
-	ModelSize = bbx._max - bbx._min;
-
-*/
 	//impostazione posizione iniziale della telecamera
-	int cameraZ = (int) bb.zMin() + cameraHeight; 
+	int cameraZ = (int) bb.zMin() + confData.cameraHeight; 
+	int cameraX = (int) (bb.xMax() + bb.xMin())/2;
 
-	if (!useBounds) {	
-		minY = bb.yMin() - cameraHeight*tan(deg2rad*(90 - alphaLaser)) + laserDistance;
-		maxY = bb.yMax() + cameraHeight*tan(deg2rad*(90 - alphaLaser)) - laserDistance;
+
+	if (!confData.useBounds) {	//calcolo bound ottimale per scansionare l'intero oggetto
+		confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.laserDistance;
+		confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
 	}
 
 	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
 	float iter = 0;
-	float total_space = maxY - minY;
+	float total_space = confData.maxY - confData.minY;
+	float space_between_frame = confData.scanSpeed/confData.fpsCam; // in millimetri
 	float num_iterations = total_space / space_between_frame + 1;
-
-	// Istruzioni di OSG
-	//osg::ref_ptr<osg::Group> root = new osg::Group;
-	//root->addChild(model.get());
 
 	/////////////////////////////////////////////////////////////
 
-	// Calcolo l'altezza del punto di intersezione dei piani laser. 
-	float z_intersection = cameraZ - laserDistance*tan(deg2rad*alphaLaser);
+/*	// Calcolo l'altezza del punto di intersezione dei piani laser. 
+	float z_intersection = cameraZ - confData.laserDistance*tan(deg2rad*confData.alphaLaser);
 	if (z_intersection <= bb.zMax()) {
 		std::cout << "ATTENZIONE: l'altezza dei punti di intersezione tra i due piani laser " << std::endl;
 		std::cout << "^^^^^^^^^^  e' inferiore all'altezza massima del modello caricato." << std::endl;
-		std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema camera/laser di almeno " 
+		std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema telecamera/laser di almeno " 
 					<< ceil(bb.zMax() - z_intersection) << "mm." << std::endl;
 
-		if (!ignoreHeight) {
-			_waitKey();
-			return 1;
+		std::cout << "Procedere comunque (s/n)? ";
+		char answer;
+		while(true) {
+			cin >> answer;
+			if (answer == 's' || answer == 'S') {
+				std::cout << "La scansione viene eseguita ignorando il suggerimento.\n";
+				break;
+			}
+			
+			else if (answer == 'n' || answer == 'N') {
+					std::cout << "Programma terminato senza eseguire la scansione.\n";
+					return 1;
+				}
 		}
-		else 
-			std::cout << "La scansione viene eseguita ignorando il suggerimento. " << std::endl;
-		
-	}
-	
+	}*/
 	//////////////////////////////////////////////////////////////
 	// Ottenimento piani laser. Nel sistema di riferimento della telecamera, i piani non cambiano mai equazione 
 	// e possono quindi essere calcolati una volta per tutte
 
 	// Tre punti per piano laser
-	osg::Vec3 a1(0,		laserDistance,	0 );
-	osg::Vec3 a2(0,		+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
-	osg::Vec3 a3(100,	+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
-	osg::Vec3 b1(0,		-laserDistance, 0);
-	osg::Vec3 b2(0,		-laserDistance + laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
-	osg::Vec3 b3(100,	+laserDistance - laserLength*sin(deg2rad*(90 - alphaLaser)),	-laserLength*cos(deg2rad*(90 - alphaLaser)));
+	osg::Vec3 a1(0,	confData.laserDistance,	0 );
+
+	osg::Vec3 a2(0,		
+		confData.laserDistance - confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),	
+		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+
+	osg::Vec3 a3(100,
+		confData.laserDistance - confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
+		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+
+
+	osg::Vec3 b1(0,	-confData.laserDistance, 0);
+
+	osg::Vec3 b2(0,
+		-confData.laserDistance + confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
+		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+
+	osg::Vec3 b3(100,
+		confData.laserDistance - confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
+		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
 
 	osg::Plane planeA(a1, a2, a3);
 	osg::Plane planeB(b1, b2, b3);
@@ -165,22 +185,22 @@ int main(int argc, char** argv)
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
 	// Fase iterativa. Per ogni frame viene scansionata l'immagine e inseriti i punti nella PC
-	for (float position = minY; position <= maxY; position += space_between_frame) {
 
+	
+
+	for (float cameraY = confData.minY; cameraY <= confData.maxY; cameraY += space_between_frame) {
+
+		osg::Vec3 position(cameraX, cameraY, cameraZ);
+		confData.cameraPos = position;
 		// Istruzioni per l'aggiornamento dello stato su console
 		float progress = ++iter / num_iterations * 100;
-		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", position, progress);
-
+		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", cameraY, progress);
+		std::cout<<std::flush;
 		// Chiamata al metodo per ottenere le catture della macchina fotografica. Vengono forniti anche i piani.
-		cv::Mat screenshot = reproject(model, position) ;
-				
-		//std::stringstream ss;
-		//ss << "./exit/Mat_debug";
-		//ss << position << ".bmp";
-		//cv::imwrite(ss.str(), screenshot);
+		cv::Mat screenshot = reproject(model, confData);
 
 		// Conversione dall'immagine allo spazio 3D
-		convert_to_3d(screenshot, position, planeCoeffA, planeCoeffB, cloud);
+		convert_to_3d(screenshot, confData, planeCoeffA, planeCoeffB, cloud);
 	
 	}
 
