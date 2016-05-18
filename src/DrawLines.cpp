@@ -69,15 +69,15 @@ int main()
 	int cameraX = (int) (bb.xMax() + bb.xMin())/2; std::cout<< "X=" << cameraX <<std::endl;
 	int cameraZ = (int) bb.zMin() + cameraHeight; 
 
-	//root->addChild(model.get());
+	root->addChild(model.get());
 
 	std::vector<osg::ref_ptr<osg::Vec3Array> > bundle, bundle2;	// Vettore contenente tutti i punti necessari a disegnare le rette del fascio
 	std::vector<osg::ref_ptr<osg::Geode> > bundleGeode, bundle2Geode;
 	std::vector<osg::ref_ptr<osg::Geometry> > bundleGeometry, bundle2Geometry;
 
 	osg::ref_ptr<osg::Group> bundleNode = new osg::Group, bundle2Node = new osg::Group;
-	//root->addChild(bundleNode.get());			//verso il meno
-	//root->addChild(bundle2Node.get());		//verso il più
+	root->addChild(bundleNode.get());			//verso il meno
+	root->addChild(bundle2Node.get());		//verso il più
 
 	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector;
 	osgUtil::IntersectionVisitor iv;
