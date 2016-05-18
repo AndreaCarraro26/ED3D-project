@@ -73,17 +73,15 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	intrinsic.at<double>(2, 0) = 0;
 	intrinsic.at<double>(2, 1) = 0;
 	intrinsic.at<double>(2, 2) = 1;
-
 	
+	float cameraX = params.cameraPos[0];
+	float cameraY = params.cameraPos[1];								//OCCHIO CHE SAREBBERO DOUBLE, SPERIAMO NON FACCIA CASINI
+	float cameraZ = params.cameraPos[2];
+	osg::Vec3 cameraPosition(cameraX, cameraY, cameraZ);
 	
-	float cameraX = params.cameraPos.x();
-	float cameraY = params.cameraPos.y();								//OCCHIO CHE SAREBBERO DOUBLE, SPERIAMO NON FACCIA CASINI
-	float cameraZ = params.cameraPos.z();
-
 	// allocazione dei punti di intersezione dei due laser
 	osg::ref_ptr<osg::Vec3Array> inter_points = new osg::Vec3Array;
 	osg::ref_ptr<osg::Vec3Array> inter_points2 = new osg::Vec3Array;
-
 	
 	osg::Vec3 point;
 	cv::Vec3f pointCV;
@@ -122,7 +120,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
 		point = getInter(deg2rad*actualAngle, params.laserLength, source, center, model);
-		if (point != null && checkCameraVisibility(params.cameraPos, point, model)) {
+		if (point != null && checkCameraVisibility(cameraPosition, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
@@ -132,16 +130,15 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		
 		// intersezioni del secondo laser
 		point = getInter(deg2rad*actualAngle, params.laserLength, source2, center2, model);
-		if (point != null && checkCameraVisibility(params.cameraPos, point, model)) {
+		if (point != null && checkCameraVisibility(cameraPosition, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
 			pointCV[2] = point.z() - cameraZ;
 
 			intersection_points.push_back(pointCV);
 		}
-
 	}
-	
+
 	/////////////////////////////////////////////////////////////////////////////////////
 	cv::Mat rVec(3, 1, cv::DataType<double>::type); // Rotation vector
 	rVec.at<double>(0) = 0;	rVec.at<double>(1) = 0;	rVec.at<double>(2) = 0;

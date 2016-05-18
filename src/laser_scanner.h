@@ -24,7 +24,7 @@ struct Configuration {
 	int scanSpeed;	
 	int fpsCam;
 
-	osg::Vec3 cameraPos;
+	cv::Vec3f cameraPos;
 
 	int sensor_width;			
 	int sensor_height;		
@@ -41,7 +41,7 @@ struct Configuration {
 };
 
 //osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node>, float, osg::Vec4d*, osg::Vec4d*);
-void convert_to_3d (cv::Mat, Configuration, std::vector<double> , std::vector<double> , pcl::PointCloud<pcl::PointXYZ>::Ptr );
+void convert_to_3d (cv::Mat, Configuration, osg::Vec4d , osg::Vec4d , pcl::PointCloud<pcl::PointXYZ>::Ptr );
 //cv::Mat get_pic(osg::ref_ptr<osg::Geode>, osg::Matrix &);
 cv::Mat reproject(osg::ref_ptr<osg::Node>, Configuration);
 	

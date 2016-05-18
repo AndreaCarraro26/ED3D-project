@@ -9,7 +9,7 @@
 #include <pcl/point_types.h>									
 #include <pcl/point_cloud.h>
 
-void convert_to_3d(cv::Mat image, Configuration params, std::vector<double> planeA_coeff, std::vector<double> planeB_coeff, 
+void convert_to_3d(cv::Mat image, Configuration params, osg::Vec4d planeA_coeff, osg::Vec4d planeB_coeff, 
 					pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
 
@@ -53,9 +53,9 @@ void convert_to_3d(cv::Mat image, Configuration params, std::vector<double> plan
 
 				z = -D1 / (A1 * P.at<double>(0) + B1 * P.at<double>(1) + C1);
 
-				pcl::PointXYZ point_3d(	P.at<double>(0)*z + params.cameraPos.x(), 
-										P.at<double>(1)*z + params.cameraPos.y(), 
-										P.at<double>(2)*z + params.cameraPos.z());
+				pcl::PointXYZ point_3d(	P.at<double>(0)*z + params.cameraPos[0], 
+										P.at<double>(1)*z + params.cameraPos[1], 
+										P.at<double>(2)*z + params.cameraPos[2]);
 				cloud->push_back(point_3d);
 				
 
@@ -71,9 +71,9 @@ void convert_to_3d(cv::Mat image, Configuration params, std::vector<double> plan
 				P = M_inv*point;
 
 				z = -(D2 / (A2*P.at<double>(0) + B2*P.at<double>(1) + C2));
-				pcl::PointXYZ point_3d(	P.at<double>(0)*z + params.cameraPos.x(), 
-										P.at<double>(1)*z + params.cameraPos.y(), 
-										P.at<double>(2)*z + params.cameraPos.z());
+				pcl::PointXYZ point_3d(	P.at<double>(0)*z + params.cameraPos[0], 
+										P.at<double>(1)*z + params.cameraPos[1], 
+										P.at<double>(2)*z + params.cameraPos[2]);
 
 				cloud->push_back(point_3d);
 			}

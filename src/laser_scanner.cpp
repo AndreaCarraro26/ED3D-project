@@ -55,6 +55,7 @@ int main(int argc, char** argv)
 	fs["scanSpeed"] >> confData.scanSpeed;
 	fs["fpsCam"] >> confData.fpsCam;
 	fs["fanLaser"] >> confData.fanLaser;
+	fs["numLaser"] >> confData.numLaser;
 
 	fs["sensor_f_x"] >> confData.f_x;
 	fs["sensor_f_y"] >> confData.f_y;
@@ -94,9 +95,9 @@ int main(int argc, char** argv)
 	osg::Vec3 ModelSize = bb._max - bb._min;
 
 	std::cout << "Dimensioni del modello:" << std::endl;
-	std::cout << "\tx_min: " << bb.xMin() << " x_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
-	std::cout << "\ty_min: " << bb.yMin() << " y_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
-	std::cout << "\tz_min: " << bb.zMin() << " z_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
+	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\tx: " << ModelSize[0] << "mm" << std::endl;
+	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\ty: " << ModelSize[1] << "mm" << std::endl;
+	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\tz: " << ModelSize[2] << "mm" << std::endl;
 
 	//impostazione posizione iniziale della telecamera
 	int cameraZ = (int) bb.zMin() + confData.cameraHeight; 
@@ -171,16 +172,14 @@ int main(int argc, char** argv)
 	// Ottenimento dei coefficienti dell'equazioni dei piani laser
 	osg::Vec4d planeA_coeffs = planeA.asVec4();
 	osg::Vec4d planeB_coeffs = planeB.asVec4();
-	//std::cout << "PlaneA coefficients calcolati una tantum: " << planeA_coeffs[0] << " " << planeA_coeffs[1] << " " << planeA_coeffs[2] << " " << planeA_coeffs[3] << std::endl;
-	//std::cout << "PlaneB coefficients calcolati una tantum: " << planeB_coeffs[0] << " " << planeB_coeffs[1] << " " << planeB_coeffs[2] << " " << planeB_coeffs[3] << std::endl;
-
-	// Conversione da vec4d to vector<double>
+	
+	/*// Conversione da vec4d to vector<double>
 	std::vector<double> planeCoeffA, planeCoeffB;
 	planeCoeffA.push_back(planeA_coeffs[0]);	planeCoeffB.push_back(planeB_coeffs[0]);
 	planeCoeffA.push_back(planeA_coeffs[1]);	planeCoeffB.push_back(planeB_coeffs[1]);
 	planeCoeffA.push_back(planeA_coeffs[2]);	planeCoeffB.push_back(planeB_coeffs[2]);
 	planeCoeffA.push_back(planeA_coeffs[3]);	planeCoeffB.push_back(planeB_coeffs[3]);
-
+*/
 	// Inizializzazione point cloud da riempire
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -190,17 +189,18 @@ int main(int argc, char** argv)
 
 	for (float cameraY = confData.minY; cameraY <= confData.maxY; cameraY += space_between_frame) {
 
-		osg::Vec3 position(cameraX, cameraY, cameraZ);
+		cv::Vec3f position(cameraX, cameraY, cameraZ);
 		confData.cameraPos = position;
 		// Istruzioni per l'aggiornamento dello stato su console
 		float progress = ++iter / num_iterations * 100;
 		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", cameraY, progress);
 		std::cout<<std::flush;
-		// Chiamata al metodo per ottenere le catture della macchina fotografica. Vengono forniti anche i piani.
+
+		// Chiamata al metodo per ottenere le catture della macchina fotografica.
 		cv::Mat screenshot = reproject(model, confData);
 
 		// Conversione dall'immagine allo spazio 3D
-		convert_to_3d(screenshot, confData, planeCoeffA, planeCoeffB, cloud);
+		convert_to_3d(screenshot, confData, planeA_coeffs, planeB_coeffs, cloud);
 	
 	}
 
