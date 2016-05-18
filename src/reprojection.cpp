@@ -75,7 +75,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	intrinsic.at<double>(2, 2) = 1;
 	
 	float cameraX = params.cameraPos[0];
-	float cameraY = params.cameraPos[1];								//OCCHIO CHE SAREBBERO DOUBLE, SPERIAMO NON FACCIA CASINI
+	float cameraY = params.cameraPos[1];
 	float cameraZ = params.cameraPos[2];
 	osg::Vec3 cameraPosition(cameraX, cameraY, cameraZ);
 	
@@ -90,9 +90,6 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	// array per i punti, ma std
 	std::vector<cv::Vec3f> intersection_points;
 	
-	// angolo iniziale di disegno del laser
-	float actualAngle = -params.fanLaser / 2;
-	float minAngle = params.fanLaser / params.numLaser;
 
 	// definizione del punto di applicazione del fascio
 	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
@@ -114,6 +111,10 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	osg::Vec3 center2(center2X, center2Y, center2Z);
 
 	osg::Vec3 null(0.0, 0.0, 0.0);
+
+	// angolo iniziale di disegno del laser
+	float actualAngle = -params.fanLaser / 2;
+	float minAngle = params.fanLaser / params.numLaser;
 
 	for (actualAngle; actualAngle <= params.fanLaser / 2; actualAngle += minAngle) {
 

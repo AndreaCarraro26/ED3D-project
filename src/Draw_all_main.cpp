@@ -77,7 +77,7 @@ int main()
 
 	osg::ref_ptr<osg::Group> bundleNode = new osg::Group, bundle2Node = new osg::Group;
 	root->addChild(bundleNode.get());			//verso il meno
-	root->addChild(bundle2Node.get());		//verso il più
+	//root->addChild(bundle2Node.get());		//verso il più
 
 	osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector;
 	osgUtil::IntersectionVisitor iv;

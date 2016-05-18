@@ -31,11 +31,12 @@ int main(int argc, char** argv)
 	/////////////////////////////////////////////////////////////////////////////////////
 	
 	// lettura dei dati di configurazione
-		
+	Configuration confData;
+	read_config(confData);
 	double deg2rad = 2 * 3.1416 / 360;
 	// Caricamento del modello
-	std::cout << "Caricamento del modello \"" << modelName << "\"...";
-	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(modelName);
+	std::cout << "Caricamento del modello \"" << confData.modelName << "\"...";
+	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(confData.modelName);
 	if (!model)
 	{
 		std::cout << "Nessun modello trovato con quel nome." << std::endl;
@@ -52,12 +53,12 @@ int main(int argc, char** argv)
 	osg::ComputeBoundsVisitor cbbv;
 	model->accept(cbbv);
 	osg::BoundingBox bb = cbbv.getBoundingBox();
-	osg::Vec3 ModelSize = bb._max - bb._min;
+	osg::Vec3 modelSize = bb._max - bb._min;
 
 	std::cout << "Dimensioni del modello:" << std::endl;
-	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\t\tx: " << ModelSize[0] << "mm" << std::endl;
-	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\t\ty: " << ModelSize[1] << "mm" << std::endl;
-	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << ModelSize[2] << "mm" << std::endl;
+	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\t\tx: " << modelSize[0] << "mm" << std::endl;
+	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\t\ty: " << modelSize[1] << "mm" << std::endl;
+	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << modelSize[2] << "mm" << std::endl;
 
 	//impostazione posizione iniziale della telecamera
 	int cameraZ = (int) bb.zMin() + confData.cameraHeight; 
@@ -69,13 +70,14 @@ int main(int argc, char** argv)
 		confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
 	}
 
-	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
-	float iter = 0;
-	float total_space = confData.maxY - confData.minY;
-	float space_between_frame = confData.scanSpeed/confData.fpsCam; // in millimetri
-	float num_iterations = total_space / space_between_frame + 1;
-
-	/////////////////////////////////////////////////////////////
+	//Ottimizzazione apertura del laser
+	float central_length = confData.cameraHeight/sin(deg2rad*confData.alphaLaser);
+	confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
+	if (confData.fanLaser > 45) {
+		cout << "ATTENZIONE: l'apertura del fascio laser necessaria a coprire l'intero modello\n";
+		cout << "^^^^^^^^^^  supera il valore massimo, aumentare l'altezza del sistema telecamera/laser";
+		//editconfig
+	}
 
 	// Calcolo l'altezza del punto di intersezione dei piani laser. 
 	float z_intersection = cameraZ - confData.laserDistance*tan(deg2rad*confData.alphaLaser);
@@ -95,6 +97,8 @@ int main(int argc, char** argv)
 			}
 			
 			else if (answer == 'n' || answer == 'N') {
+					//editconfig
+					
 					std::cout << "Programma terminato senza eseguire la scansione.\n";
 					return 1;
 				}
@@ -102,7 +106,7 @@ int main(int argc, char** argv)
 	}
 	//////////////////////////////////////////////////////////////
 	// Ottenimento piani laser. Nel sistema di riferimento della telecamera, i piani non cambiano mai equazione 
-	// e possono quindi essere calcolati una volta per tutte
+	// e possono quindi essere calcolati solo una volta
 
 	// Tre punti per piano laser
 	osg::Vec3 a1(0,	confData.laserDistance,	0 );
@@ -129,23 +133,22 @@ int main(int argc, char** argv)
 	osg::Plane planeA(a1, a2, a3);
 	osg::Plane planeB(b1, b2, b3);
 	
-	// Ottenimento dei coefficienti dell'equazioni dei piani laser
+	// Ottenimento dei coefficienti delle equazioni dei piani laser
 	osg::Vec4d planeA_coeffs = planeA.asVec4();
 	osg::Vec4d planeB_coeffs = planeB.asVec4();
 	
-	/*// Conversione da vec4d to vector<double>
-	std::vector<double> planeCoeffA, planeCoeffB;
-	planeCoeffA.push_back(planeA_coeffs[0]);	planeCoeffB.push_back(planeB_coeffs[0]);
-	planeCoeffA.push_back(planeA_coeffs[1]);	planeCoeffB.push_back(planeB_coeffs[1]);
-	planeCoeffA.push_back(planeA_coeffs[2]);	planeCoeffB.push_back(planeB_coeffs[2]);
-	planeCoeffA.push_back(planeA_coeffs[3]);	planeCoeffB.push_back(planeB_coeffs[3]);
-*/
-	// Inizializzazione point cloud da riempire
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	// Fase iterativa. Per ogni frame viene scansionata l'immagine e inseriti i punti nella PC
 
-	
+	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
+	float iter = 0;
+	float total_space = confData.maxY - confData.minY;
+	float space_between_frame = confData.scanSpeed/confData.fpsCam; // in millimetri
+	float num_iterations = total_space / space_between_frame + 1;
+
+	// Inizializzazione point cloud da riempire
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
 	for (float cameraY = confData.minY; cameraY <= confData.maxY; cameraY += space_between_frame) {
 

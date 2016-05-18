@@ -9,6 +9,7 @@
 
 struct Configuration {
 
+	std::string modelName;
 	float cameraHeight;
 	float alphaLaser;
 	float fanLaser;
@@ -41,7 +42,9 @@ struct Configuration {
 };
 
 //osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node>, float, osg::Vec4d*, osg::Vec4d*);
-void convert_to_3d (cv::Mat, Configuration, osg::Vec4d , osg::Vec4d , pcl::PointCloud<pcl::PointXYZ>::Ptr );
 //cv::Mat get_pic(osg::ref_ptr<osg::Geode>, osg::Matrix &);
+
+void read_config(Configuration&);
 cv::Mat reproject(osg::ref_ptr<osg::Node>, Configuration);
-	
+int draw_lasers(osg::ref_ptr<osg::Node>, Configuration);
+void convert_to_3d (cv::Mat, Configuration, osg::Vec4d , osg::Vec4d , pcl::PointCloud<pcl::PointXYZ>::Ptr );

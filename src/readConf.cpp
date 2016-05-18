@@ -1,22 +1,20 @@
 #include "laser_scanner.h"
 
-void read_config(Configuation confData) {
+void read_config(Configuration& confData) {
 
 	std::string confFile = "../data/Configuration.xml";
 	cv::FileStorage fs;
 	fs.open(confFile, cv::FileStorage::READ);
 
-	struct Configuration confData; //struct contentente tutti i dati di configurazione
-
-
-	std::string modelName;
-	fs["model"] >> modelName;
+	fs["model"] >> confData.modelName;
 
 	fs["cameraHeight"] >> confData.cameraHeight;
 
 	fs["alphaLaser"] >> confData.alphaLaser;
 	fs["laserDistance"] >> confData.laserDistance;
-	confData.laserLength = confData.cameraHeight/cos(deg2rad*confData.alphaLaser);
+	fs["fanLaser"] >> confData.fanLaser;
+	fs["numLaser"] >> confData.numLaser;
+	confData.laserLength = confData.cameraHeight/cos(3.1416/180*confData.alphaLaser);
 	
 	fs["ignoreHeight"] >> confData.ignoreHeight;
 	fs["useBounds"] >> confData.useBounds; // Se true usa il range letto, altrimenti calcola quello ottimale
@@ -25,8 +23,7 @@ void read_config(Configuation confData) {
 
 	fs["scanSpeed"] >> confData.scanSpeed;
 	fs["fpsCam"] >> confData.fpsCam;
-	fs["fanLaser"] >> confData.fanLaser;
-	fs["numLaser"] >> confData.numLaser;
+
 
 	fs["sensor_f_x"] >> confData.f_x;
 	fs["sensor_f_y"] >> confData.f_y;
