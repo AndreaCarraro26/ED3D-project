@@ -1,3 +1,5 @@
+#include "laser_scanner.h"
+
 #include <osgDB/ReadFile>
 #include <osg/ShapeDrawable>
 #include <osg/Geode>
@@ -21,9 +23,7 @@
 
 int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 {
-	std::string confFile = "../data/Configuration.xml";
 	
-	float minAngle = params.fanLaser / params.numLaser;
 	float deg2rad = 2 * PI / 360;
 	
 	// Il nodo root è un group, un cui figlio è il modello 
@@ -42,10 +42,6 @@ int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 	osg::ref_ptr<osg::Group> bundleNode = new osg::Group, bundle2Node = new osg::Group;
 	root->addChild(bundleNode.get());			//verso il meno
 	root->addChild(bundle2Node.get());		//verso il più
-
-	int position=0; //////overrrrride
-
-	//cameraY=position;
 	
 	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);					//punto di partenza del laser
@@ -62,8 +58,10 @@ int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 	color->push_back(osg::Vec4(1.0, 0.0, 0.0, 1.0));
 
 	int i = 0;
-	float actualAngle = -fanLaser / 2;
-	for (i; actualAngle <= fanLaser / 2; i++) {
+	float actualAngle = -params.fanLaser / 2;
+	float minAngle = params.fanLaser / params.numLaser;
+
+	for (i; actualAngle <= params.fanLaser / 2; i++, actualAngle+=minAngle) {
 
 		bundle.push_back(new osg::Vec3Array);
 		bundleGeode.push_back(new osg::Geode());

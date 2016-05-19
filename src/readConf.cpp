@@ -39,5 +39,19 @@ void read_config(Configuration& confData) {
 	
 	fs.release();
 
+	cv::Mat intrinsic(3, 3, CV_64FC1);
+	
+	// Popolamento della matrice degli intrinsici
+	intrinsic.at<double>(0, 0) = confData.f_x;
+	intrinsic.at<double>(0, 1) = 0;
+	intrinsic.at<double>(0, 2) = confData.x_0;
+	intrinsic.at<double>(1, 0) = 0;
+	intrinsic.at<double>(1, 1) = confData.f_y;
+	intrinsic.at<double>(1, 2) = confData.y_0;
+	intrinsic.at<double>(2, 0) = 0;
+	intrinsic.at<double>(2, 1) = 0;
+	intrinsic.at<double>(2, 2) = 1;
+
+	confData.intrinsicMat = intrinsic;
 
 }

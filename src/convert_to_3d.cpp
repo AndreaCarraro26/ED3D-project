@@ -13,20 +13,7 @@ void convert_to_3d(cv::Mat image, Configuration params, osg::Vec4d planeA_coeff,
 					pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
 
-	cv::Mat intrinsic(3, 3, CV_64FC1);
-	
-	// Popolamento della matrice degli intrinsici
-	intrinsic.at<double>(0, 0) = params.f_x;
-	intrinsic.at<double>(0, 1) = 0;
-	intrinsic.at<double>(0, 2) = params.x_0;
-	intrinsic.at<double>(1, 0) = 0;
-	intrinsic.at<double>(1, 1) = params.f_y;
-	intrinsic.at<double>(1, 2) = params.y_0;
-	intrinsic.at<double>(2, 0) = 0;
-	intrinsic.at<double>(2, 1) = 0;
-	intrinsic.at<double>(2, 2) = 1;
-
-	cv::Mat M_inv = intrinsic.inv();
+	cv::Mat M_inv = params.intrinsicMat.inv();
 	
 	cv::Mat P;
 	double z;
@@ -37,14 +24,15 @@ void convert_to_3d(cv::Mat image, Configuration params, osg::Vec4d planeA_coeff,
 	B1 = planeB_coeff[1];	B2 = planeA_coeff[1];
 	C1 = planeB_coeff[2];	C2 = planeA_coeff[2];
 	D1 = planeB_coeff[3];	D2 = planeA_coeff[3];
-
+	//std::cout<<"check "<<params.roi_height<< " " << params.sensor_width << " " << params.roi_y_1; ---------GIUSTO
+	//cv::imshow("", image);
 	int row;
 	for (int i = 0; i < params.roi_height; ++i) {
 		for (int j = 0; j < params.sensor_width; ++j) {
 
 			// elaborazione per la prima ROI
 			row = i + params.roi_y_1;	
-			if (image.at<uchar>(row, j) == 128) {
+			if (image.at<uchar>(row, j) >= 128) {
 				point.at<double>(0,0) = j;
 				point.at<double>(1,0) = row;
 				point.at<double>(2,0) = 1;
@@ -63,7 +51,7 @@ void convert_to_3d(cv::Mat image, Configuration params, osg::Vec4d planeA_coeff,
 			// elaborazione per la seconda ROI
 			row = i + params.roi_y_2;
 			
-			if (image.at<uchar>(row, j) == 255) {
+			if (image.at<uchar>(row, j) >= 128) {
 				point.at<double>(0) = j;
 				point.at<double>(1) = row;
 				point.at<double>(2) = 1;

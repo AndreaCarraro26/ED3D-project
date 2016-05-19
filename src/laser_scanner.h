@@ -39,6 +39,8 @@ struct Configuration {
 	int roi_y_1; 
 	int roi_y_2;
 	
+	cv::Mat intrinsicMat;
+	
 };
 
 //osg::ref_ptr<osg::Geode> scan_scene(osg::ref_ptr<osg::Node>, float, osg::Vec4d*, osg::Vec4d*);

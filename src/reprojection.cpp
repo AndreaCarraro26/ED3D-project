@@ -60,19 +60,6 @@ bool checkCameraVisibility(osg::Vec3& cameraPos, osg::Vec3& point, osg::ref_ptr<
 cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{ 
 
 	////////////////////////////////////////////////////////////////
-
-	cv::Mat intrinsic(3, 3, CV_64FC1);
-
-	// Popolamento della matrice degli intrinsici
-	intrinsic.at<double>(0, 0) = params.f_x;
-	intrinsic.at<double>(0, 1) = 0;
-	intrinsic.at<double>(0, 2) = params.x_0;
-	intrinsic.at<double>(1, 0) = 0;
-	intrinsic.at<double>(1, 1) = params.f_y;
-	intrinsic.at<double>(1, 2) = params.y_0;
-	intrinsic.at<double>(2, 0) = 0;
-	intrinsic.at<double>(2, 1) = 0;
-	intrinsic.at<double>(2, 2) = 1;
 	
 	float cameraX = params.cameraPos[0];
 	float cameraY = params.cameraPos[1];
@@ -89,7 +76,6 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 
 	// array per i punti, ma std
 	std::vector<cv::Vec3f> intersection_points;
-	
 
 	// definizione del punto di applicazione del fascio
 	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
@@ -121,6 +107,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		//std::cout << actualAngle << std::endl;
 		// intersezione del primo laser
 		point = getInter(deg2rad*actualAngle, params.laserLength, source, center, model);
+
 		if (point != null && checkCameraVisibility(cameraPosition, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
@@ -131,6 +118,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		
 		// intersezioni del secondo laser
 		point = getInter(deg2rad*actualAngle, params.laserLength, source2, center2, model);
+
 		if (point != null && checkCameraVisibility(cameraPosition, point, model)) {
 			pointCV[0] = point.x() - cameraX;
 			pointCV[1] = point.y() - cameraY;
@@ -159,9 +147,9 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	image_to_return.setTo(0);
 
 	if (intersection_points.size()!=0)
-		cv::projectPoints(intersection_points, rVec, tVec, intrinsic, distCoeffs, imagePoints);
+		cv::projectPoints(intersection_points, rVec, tVec, params.intrinsicMat, distCoeffs, imagePoints);
 
-	//std::cout << imagePoints.size() << std::endl;
+	//std::cout <<"punti riprogettati "<< imagePoints.size() << std::endl;
 
 	float x, y;
 	for (int i = 0; i < imagePoints.size(); i++) {
@@ -171,7 +159,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		if (0<((int)x) && ((int)x) < params.sensor_width && 0<((int)y) && ((int)y) < params.sensor_height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
-		} 
+		} else std::cout<<"fuori";
 	}
 
 	return image_to_return;

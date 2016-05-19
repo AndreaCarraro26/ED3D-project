@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <opencv_storage>
 	<model> ../data/prodotto.stl </model>
-	<cameraHeight> 1400 </cameraHeight>
+	<cameraHeight> 1900 </cameraHeight>
 	<ignoreHeight> 0 </ignoreHeight>
 	<laserLength> 6000 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
 	<laserDistance> 500 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
-	<numLaser> 300	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<numLaser> 50	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
 	
 	<useBounds> 0 </useBounds>		<!-- Usa i limiti definiti sotto, altrimenti scansiona tutto il modello -->
 	<minY>-200</minY>			
@@ -13,7 +13,7 @@
 	
 	<scanSpeed>1000 </scanSpeed>	<!-- Valori 100 mm/s – 1000 mm/s -->
 	<fpsCam>300	 </fpsCam>	<!-- Valori 100 fps – 500 fps -->
-	<alphaLaser> 65 </alphaLaser>	<!-- Valori 60° - 70° -->
+	<alphaLaser> 70 </alphaLaser>	<!-- Valori 60° - 70° -->
 	<fanLaser> 45 </fanLaser>	<!-- Valori 30° - 45° -->
 	
 	<!-- Dati del sensore della camera-->
