@@ -157,7 +157,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 		if (0<((int)x) && ((int)x) < params.sensor_width && 0<((int)y) && ((int)y) < params.sensor_height) {
 			//std::cout << (int)x << " " << (int)y << std::endl;
 			image_to_return.at<uchar>((int)y, (int)x) = 255;
-		} else std::cout<<"fuori";
+		} //else std::cout<<"fuori";
 	}
 
 	return image_to_return;

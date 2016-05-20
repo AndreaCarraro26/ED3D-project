@@ -56,7 +56,6 @@ int main(int argc, char** argv)
 	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << modelSize[2] << "mm" << std::endl;
 
 	bool isConfigOK = false;
-	bool edited = false;
 	
 	while(!isConfigOK) {
 
@@ -68,20 +67,35 @@ int main(int argc, char** argv)
 		confData.cameraPos[0] = (bb.xMax() + bb.xMin())/2;
 		confData.cameraPos[1] = confData.minY;
 		confData.cameraPos[2] = bb.zMin() + confData.cameraHeight; 
-		
-		//Ottimizzazione apertura del laser
-		float central_length = confData.cameraHeight/sin(deg2rad*confData.alphaLaser);
-		confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
-		
+	
 		std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
 		draw_lasers(model, confData);
 
+		//Ottimizzazione apertura del laser
+		std::cout << "Calcolare l'apertura dei laser ottimale? (s/n) "<<std::flush;
+		while(true) {
+			char answer;
+			cin >> answer;
+			if (answer == 's' || answer == 'S') {
+					float central_length = (confData.cameraHeight-modelSize[2])/sin(deg2rad*confData.alphaLaser);
+					confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
+				break;
+			}
+			
+			else if (answer == 'n' || answer == 'N') {
+					break;
+				}
+			std::cout<<"Input non valido. Reinserire.\nCalcolare l'apertura dei laser ottimale? (s/n) "<<std::endl;
+			std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
+			draw_lasers(model, confData);
+		}
+	
+		
 		if (confData.fanLaser > 45) {
 			cout << "ATTENZIONE: l'apertura del fascio laser necessaria a coprire l'intero modello\n";
 			cout << "^^^^^^^^^^  supera il valore massimo, aumentare l'altezza del sistema telecamera/laser"<<std::flush;
 			//editconfig
 			isConfigOK = false;
-			edited = true;
 			edit_conf(confData);
 		}
 
@@ -105,10 +119,10 @@ int main(int argc, char** argv)
 				else if (answer == 'n' || answer == 'N') {
 						//editconfig
 						isConfigOK = false;
-						edited = true;
 						edit_conf(confData);
 						break;
 					}
+			std::cout<<"Input non valido. Reinserire.\nProcedere comunque? (s/n) "<<std::endl;
 			}
 		}
 
@@ -127,6 +141,7 @@ int main(int argc, char** argv)
 					edit_conf(confData);
 					break;
 				}
+		std::cout<<"Input non valido. Reinserire.\nEseguire la scansione? (s/n) "<<std::endl;
 		}
 			
 	}
@@ -138,23 +153,23 @@ int main(int argc, char** argv)
 	osg::Vec3 a1(0,	confData.laserDistance,	0 );
 
 	osg::Vec3 a2(0,		
-		confData.laserDistance - confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),	
-		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+		confData.laserDistance - confData.laserLength*cos(deg2rad*(confData.alphaLaser)),	
+		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
 
 	osg::Vec3 a3(100,
-		confData.laserDistance - confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
-		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+		confData.laserDistance - confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
+		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
 
 
 	osg::Vec3 b1(0,	-confData.laserDistance, 0);
 
 	osg::Vec3 b2(0,
-		-confData.laserDistance + confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
-		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+		-confData.laserDistance + confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
+		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
 
 	osg::Vec3 b3(100,
-		-confData.laserDistance + confData.laserLength*sin(deg2rad*(90 - confData.alphaLaser)),
-		-confData.laserLength*cos(deg2rad*(90 - confData.alphaLaser)));
+		-confData.laserDistance + confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
+		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
 
 	osg::Plane planeA(a1, a2, a3);
 	osg::Plane planeB(b1, b2, b3);

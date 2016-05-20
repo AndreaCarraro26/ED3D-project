@@ -44,14 +44,14 @@ int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);					//punto di partenza del laser
 	float centerX = laserX;
-	float centerY = laserY - params.laserLength*sin(deg2rad*(90 - params.alphaLaser));
-	float centerZ = laserZ - params.laserLength*cos(deg2rad*(90 - params.alphaLaser));
+	float centerY = laserY - params.laserLength*cos(deg2rad*(params.alphaLaser));
+	float centerZ = laserZ - params.laserLength*sin(deg2rad*(params.alphaLaser));
 
 	float laser2X = cameraX, laser2Y = cameraY - params.laserDistance, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	float center2X = laser2X;
-	float center2Y = laser2Y + params.laserLength*sin(deg2rad*(90 - params.alphaLaser));
-	float center2Z = laser2Z - params.laserLength*cos(deg2rad*(90 - params.alphaLaser));
+	float center2Y = laser2Y + params.laserLength*cos(deg2rad*(params.alphaLaser));
+	float center2Z = laser2Z - params.laserLength*sin(deg2rad*(params.alphaLaser));
 	osg::ref_ptr<osg::Vec4Array> color = new osg::Vec4Array;
 	color->push_back(osg::Vec4(1.0, 0.0, 0.0, 1.0));
 
@@ -110,8 +110,10 @@ int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 
 	osgViewer::Viewer viewer;
 	viewer.setSceneData(root.get());
+
+	viewer.setUpViewInWindow(0,0, 640, 480);
+	viewer.realize();
 	viewer.run();
-	
 
 	return 0;
 }
