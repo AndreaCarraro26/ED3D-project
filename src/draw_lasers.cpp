@@ -10,8 +10,6 @@
 #include <osg/Point>
 // include STD
 #include <math.h>       /* sin */
-#include <vector>  //for std::vector
-#include <string>
 
 // include OCV
 #include <opencv2/core/core.hpp>

@@ -2,9 +2,7 @@
 
 #include "laser_scanner.h"
 
-#include <math.h> 
-#include <vector> 
-#include <iostream>
+#include <math.h>
 
 #include <osgUtil/LineSegmentIntersector>
 #include <osgUtil/IntersectionVisitor>

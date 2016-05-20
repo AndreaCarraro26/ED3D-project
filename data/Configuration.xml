@@ -2,7 +2,7 @@
 <opencv_storage>
 	<model> ../data/prodotto.stl </model>
 	<cameraHeight> 1900 </cameraHeight>
-	<ignoreHeight> 0 </ignoreHeight>
+
 	<laserLength> 6000 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
 	<laserDistance> 500 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
 	<numLaser> 50	 </numLaser>	<!-- Numero di linee che compongono il fascio -->

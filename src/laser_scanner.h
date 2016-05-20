@@ -1,4 +1,10 @@
+#ifndef LASER_SCANNER_H
+#define LASER_SCANNER_H
+
 //#include "stdafx.h"
+#include <iostream>
+#include <string>
+#include <vector>
 
 #include <osg/Group>
 #include <pcl/point_types.h>
@@ -17,10 +23,9 @@ struct Configuration {
 	float laserLength;
 	int numLaser;
 	
-	bool ignoreHeight;
 	bool useBounds;
-	int minY;
-	int maxY;
+	float minY;
+	float maxY;
 
 	int scanSpeed;	
 	int fpsCam;
@@ -47,6 +52,9 @@ struct Configuration {
 //cv::Mat get_pic(osg::ref_ptr<osg::Geode>, osg::Matrix &);
 
 void read_config(Configuration&);
+void edit_conf(Configuration&);
 cv::Mat reproject(osg::ref_ptr<osg::Node>, Configuration);
 int draw_lasers(osg::ref_ptr<osg::Node>, Configuration);
 void convert_to_3d (cv::Mat, Configuration, osg::Vec4d , osg::Vec4d , pcl::PointCloud<pcl::PointXYZ>::Ptr );
+
+#endif
