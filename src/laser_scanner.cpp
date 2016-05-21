@@ -55,18 +55,22 @@ int main(int argc, char** argv)
 	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\t\ty: " << modelSize[1] << "mm" << std::endl;
 	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << modelSize[2] << "mm" << std::endl;
 
+	if (!confData.useBounds) {	//calcolo bound ottimale per scansionare l'intero oggetto
+			confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.laserDistance;
+			confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
+	}
+
+	confData.laserLength = confData.cameraHeight/sin(confData.alphaLaser);
+	std::cout<<"lenght " <<confData.laserLength<<std::endl;
+	std::cout<<"height " <<confData.cameraHeight<<std::endl;
 	bool isConfigOK = false;
 	
 	while(!isConfigOK) {
 
-		if (!confData.useBounds) {	//calcolo bound ottimale per scansionare l'intero oggetto
-			confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.laserDistance;
-			confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
-		}
 		//impostazione posizione iniziale della telecamera
 		confData.cameraPos[0] = (bb.xMax() + bb.xMin())/2;
 		confData.cameraPos[1] = confData.minY;
-		confData.cameraPos[2] = bb.zMin() + confData.cameraHeight; 
+		confData.cameraPos[2] = bb.zMin() + confData.cameraHeight;
 	
 		std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
 		draw_lasers(model, confData);
@@ -75,7 +79,7 @@ int main(int argc, char** argv)
 		std::cout << "Calcolare l'apertura dei laser ottimale? (s/n) "<<std::flush;
 		while(true) {
 			char answer;
-			cin >> answer;
+			std::cin >> answer;
 			if (answer == 's' || answer == 'S') {
 					float central_length = (confData.cameraHeight-modelSize[2])/sin(deg2rad*confData.alphaLaser);
 					confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
@@ -110,7 +114,7 @@ int main(int argc, char** argv)
 			std::cout << "Procedere comunque? (s/n) ";
 			char answer;
 			while(true) {
-				cin >> answer;
+				std::cin >> answer;
 				if (answer == 's' || answer == 'S') {
 					std::cout << "La scansione viene eseguita ignorando il suggerimento.\n";
 					break;
@@ -129,7 +133,7 @@ int main(int argc, char** argv)
 		std::cout<<"Eseguire la scansione? (s/n) ";
 		while(true) {
 			char answer;
-			cin >> answer;
+			std::cin >> answer;
 			if (answer == 's' || answer == 'S') {
 				isConfigOK = true;
 				break;

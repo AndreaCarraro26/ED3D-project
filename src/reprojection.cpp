@@ -47,9 +47,9 @@ bool checkCameraVisibility(osg::Vec3& cameraPos, osg::Vec3& point, osg::ref_ptr<
 	if (intersector->containsIntersections()) {
 		osg::Vec3 viewBlock = intersector->getFirstIntersection().getLocalIntersectPoint();
 		if (abs(viewBlock.z()-point.z())>1)
-		return false; 
-	else
-		return true;
+			return false; 
+		else
+			return true;
 	} else 
 		return true;
 }
