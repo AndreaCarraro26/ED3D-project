@@ -60,9 +60,29 @@ int main(int argc, char** argv)
 			confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
 	}
 
-	confData.laserLength = confData.cameraHeight/sin(confData.alphaLaser);
-	std::cout<<"lenght " <<confData.laserLength<<std::endl;
-	std::cout<<"height " <<confData.cameraHeight<<std::endl;
+	confData.laserLength = confData.cameraHeight/sin(confData.alphaLaser);			//non è esattamente giusto ma boh, i conti son quelli
+	//std::cout<<"lenght " <<confData.laserLength<<std::endl;
+	//std::cout<<"height " <<confData.cameraHeight<<std::endl;
+	
+	//Ottimizzazione apertura del laser
+	std::cout << "Calcolare l'apertura dei laser ottimale? (s/n) "<<std::flush;
+	while(true) {
+		char answer;
+		std::cin >> answer;
+		if (answer == 's' || answer == 'S') {
+				float central_length = (confData.cameraHeight-modelSize[2])/sin(deg2rad*confData.alphaLaser);
+				confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
+			break;
+		}
+		
+		else if (answer == 'n' || answer == 'N') {
+				break;
+			}
+		std::cin.clear();
+		std::cin.ignore(std::cin.rdbuf()->in_avail());
+		std::cout<<"Input non valido. Reinserire.\nCalcolare l'apertura dei laser ottimale? (s/n) "<<std::endl;	
+	}
+
 	bool isConfigOK = false;
 	
 	while(!isConfigOK) {
@@ -71,29 +91,6 @@ int main(int argc, char** argv)
 		confData.cameraPos[0] = (bb.xMax() + bb.xMin())/2;
 		confData.cameraPos[1] = confData.minY;
 		confData.cameraPos[2] = bb.zMin() + confData.cameraHeight;
-	
-		std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
-		draw_lasers(model, confData);
-
-		//Ottimizzazione apertura del laser
-		std::cout << "Calcolare l'apertura dei laser ottimale? (s/n) "<<std::flush;
-		while(true) {
-			char answer;
-			std::cin >> answer;
-			if (answer == 's' || answer == 'S') {
-					float central_length = (confData.cameraHeight-modelSize[2])/sin(deg2rad*confData.alphaLaser);
-					confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
-				break;
-			}
-			
-			else if (answer == 'n' || answer == 'N') {
-					break;
-				}
-			std::cout<<"Input non valido. Reinserire.\nCalcolare l'apertura dei laser ottimale? (s/n) "<<std::endl;
-			std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
-			draw_lasers(model, confData);
-		}
-	
 		
 		if (confData.fanLaser > 45) {
 			cout << "ATTENZIONE: l'apertura del fascio laser necessaria a coprire l'intero modello\n";
@@ -101,6 +98,8 @@ int main(int argc, char** argv)
 			//editconfig
 			isConfigOK = false;
 			edit_conf(confData);
+			std::cin.clear();
+			std::cin.ignore(std::cin.rdbuf()->in_avail());
 		}
 
 		// Calcolo l'altezza del punto di intersezione dei piani laser. 
@@ -124,11 +123,18 @@ int main(int argc, char** argv)
 						//editconfig
 						isConfigOK = false;
 						edit_conf(confData);
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
 						break;
 					}
+			std::cin.clear();
+			std::cin.ignore(std::cin.rdbuf()->in_avail());
 			std::cout<<"Input non valido. Reinserire.\nProcedere comunque? (s/n) "<<std::endl;
 			}
 		}
+
+		std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
+		draw_lasers(model, confData);
 
 		std::cout<<"Eseguire la scansione? (s/n) ";
 		while(true) {
@@ -143,8 +149,12 @@ int main(int argc, char** argv)
 					//editconfig
 					isConfigOK = false;
 					edit_conf(confData);
+					std::cin.clear();
+					std::cin.ignore(std::cin.rdbuf()->in_avail());
 					break;
 				}
+		std::cin.clear();
+		std::cin.ignore(std::cin.rdbuf()->in_avail());
 		std::cout<<"Input non valido. Reinserire.\nEseguire la scansione? (s/n) "<<std::endl;
 		}
 			

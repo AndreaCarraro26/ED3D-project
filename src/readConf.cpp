@@ -58,117 +58,127 @@ void read_config(Configuration& confData) {
 
 void edit_conf(Configuration& confData){
 
-	#ifdef _WIN32
-		system("cls");
-	#elif linux 
-		system("clear");
-	#endif
-
-	std::cout << "MENU' DI CONFIGURAZIONE\n";
-	std::cout << "-----------------------\n";
-	int answer = -1;
-
-	std::cout << "Selezionare il parametro da modificare:\n";
-	std::cout << "[1] Altezza sistema telecamera/laser\n";
-	std::cout << "[2] Larghezza dei laser rispetto alla telecamera\n";
-	std::cout << "[3] Inclinazione dei piani laser rispetto al piano XY\n";
-	std::cout << "[4] Posizione Y della telecamera iniziale\n";
-	std::cout << "[5] Posizione Y della telecamera finale\n\n"<<std::flush;
-	std::cin >> answer;
-
 	float input;
-	bool input_valid = false;
-	switch(answer) {
+	
+	bool esc = false;
+	while(!esc) {
+		std::cin.clear();
+		std::cin.ignore(std::cin.rdbuf()->in_avail());
 
-		case 1:
-			while(!input_valid) {
-				input_valid = true;
-				std::cout << "Valore corrente: " << confData.cameraHeight << std::endl;
-				std::cout << "Nuova altezza: "<<std::flush; std::cin >> input;
-				if(std::cin.fail() || input<=0) {
-					std::cin.clear();
-					std::cin.ignore();
-					std::cout << "Input non valido! Inserire un numero maggiore di 0\n";
-					input_valid = false;
-				}
-			}
-			confData.cameraHeight = input;
-			break;
+		#ifdef _WIN32
+			system("cls");
+		#elif linux 
+			system("clear");
+		#endif
 
-		case 2: 
-			while(!input_valid) {
-				input_valid = true;
-				std::cout << "Valore corrente: " << confData.laserDistance << std::endl;
-				std::cout << "Nuova distanza (valori accettati: da 500 a 800mm): "; std::cin >> input;
-				if(std::cin.fail() || input <= 500 || input > 800) {
-					std::cin.clear();
-					std::cin.ignore();
-					std::cout << "Input non valido! Inserire un numero compreso tra 500 e 800\n";
-					input_valid = false;
-				}
-			}
-			confData.laserDistance = input;
-			break;
+		bool input_valid = false;
+		std::cout << "MENU' DI CONFIGURAZIONE\n";
+		std::cout << "-----------------------\n";
+		char answer_c;
 
-		case 3: 
-			while(!input_valid) {
-				input_valid = true;
-				std::cout << "Valore corrente: " << confData.alphaLaser << std::endl;
-				std::cout << "Nuovo angolo (valori accettati: da 60 a 70 gradi): "; std::cin >> input;
-				if(std::cin.fail() || input <= 60 || input > 70) {
-					std::cin.clear();
-					std::cin.ignore();
-					std::cout << "Input non valido! Inserire un numero compreso tra 60 e 70\n";
-					input_valid = false;
+		std::cout << "Selezionare il parametro da modificare:\n";
+		std::cout << "[1] Altezza sistema telecamera/laser\n";
+		std::cout << "[2] Larghezza dei laser rispetto alla telecamera\n";
+		std::cout << "[3] Inclinazione dei piani laser rispetto al piano XY\n";
+		std::cout << "[4] Posizione Y della telecamera iniziale\n";
+		std::cout << "[5] Posizione Y della telecamera finale\n\n";
+		std::cout << "[0] Esci dalla configurazione\n\n"<<std::flush;
+		std::cin >> answer_c;
+		
+		int answer = answer_c-'0';
+		std::cout <<"answer " <<answer;
+		
+		switch(answer) {
+			case 0:
+				esc = true;
+				break;
+			case 1:
+				while(!input_valid) {
+					input_valid = true;
+					std::cout << "Valore corrente: " << confData.cameraHeight << std::endl;
+					std::cout << "Nuova altezza: "<<std::flush; std::cin >> input;
+					if(std::cin.fail() || input<=0) {
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
+						std::cout << "Input non valido! Inserire un numero maggiore di 0\n";
+						input_valid = false;
+					}
 				}
+				confData.cameraHeight = input;
+				break;
 
-			}
-			confData.alphaLaser = (int) input;
-			break;
-		case 4: 
-			while(!input_valid) {
-				input_valid = true;
-				std::cout << "Valore corrente: " << confData.minY << std::endl;
-				std::cout << "Nuova posizione iniziale: "; std::cin >> input; 
-				if(std::cin.fail()) {
-					std::cin.clear();
-					std::cin.ignore();
-					std::cout << "Input non valido! Inserire un numero!\n";
-					input_valid = false;
+			case 2: 
+				while(!input_valid) {
+					input_valid = true;
+					std::cout << "Valore corrente: " << confData.laserDistance << std::endl;
+					std::cout << "Nuova distanza (valori accettati: da 500 a 800mm): "<<std::flush; std::cin >> input;
+					if(std::cin.fail() || input <= 500 || input > 800) {
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
+						std::cout << "Input non valido! Inserire un numero compreso tra 500 e 800\n";
+						input_valid = false;
+					}
 				}
-			}
-			confData.minY = input;
-			break;
-		case 5: 
-			while(!input_valid) {
-				input_valid = true;
-				std::cout << "Valore corrente: " << confData.maxY << std::endl;
-				std::cout << "Nuova posizione finale: "; std::cin >> input; 
-				if(std::cin.fail()) {
-					std::cin.clear();
-					std::cin.ignore();
-					std::cout << "Input non valido! Inserire un numero!\n";
-					input_valid = false;
-				}
-			}
-			confData.maxY = input;
-			break;
-		default:
-			#ifdef _WIN32
-				system("cls");
-			#elif linux 
-				system("clear");
-			#endif
+				confData.laserDistance = input;
+				break;
 
-			std::cout<< "Scelta non valida! Selezionare un numero del menu'\n\n";
-			std::cout << "Selezionare il parametro da modificare:\n";
-			std::cout << "[1] Altezza sistema telecamera/laser\n";
-			std::cout << "[2] Larghezza dei laser rispetto alla telecamera\n";
-			std::cout << "[3] Inclinazione dei piani laser rispetto al piano XY\n";
-			std::cout << "[4] Posizione Y della telecamera iniziale\n";
-			std::cout << "[5] Posizione Y della telecamera finale\n\n"<<std::flush;
-			std::cin >> answer;
-			//continue;
+			case 3: 
+				while(!input_valid) {
+					input_valid = true;
+					std::cout << "Valore corrente: " << confData.alphaLaser << std::endl;
+					std::cout << "Nuovo angolo (valori accettati: da 60 a 70 gradi): "<<std::flush; std::cin >> input;
+					if(std::cin.fail() || input <= 60 || input > 70) {
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
+						std::cout << "Input non valido! Inserire un numero compreso tra 60 e 70\n";
+						input_valid = false;
+					}
+
+				}
+				confData.alphaLaser = (int) input;
+				break;
+			case 4: 
+				while(!input_valid) {
+					input_valid = true;
+					std::cout << "Valore corrente: " << confData.minY << std::endl;
+					std::cout << "Nuova posizione iniziale: "<<std::flush; std::cin >> input; 
+					if(std::cin.fail()) {
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
+						std::cout << "Input non valido! Inserire un numero!\n";
+						input_valid = false;
+					}
+				}
+				confData.minY = input;
+				break;
+			case 5: 
+				while(!input_valid) {
+					input_valid = true;
+					std::cout << "Valore corrente: " << confData.maxY << std::endl;
+					std::cout << "Nuova posizione finale: "<<std::flush; std::cin >> input; 
+					if(std::cin.fail()) {
+						std::cin.clear();
+						std::cin.ignore(std::cin.rdbuf()->in_avail());
+						std::cout << "Input non valido! Inserire un numero!\n";
+						input_valid = false;
+					}
+				}
+				confData.maxY = input;
+				break;
+
+			default: {
+				#ifdef _WIN32
+					system("cls");
+				#elif linux 
+					system("clear");
+				#endif
+
+				std::cout<< "Scelta non valida! Selezionare un numero del menu'\n\n";
+				std::cin.clear();
+				std::cin.ignore(std::cin.rdbuf()->in_avail());
+			}
+		}
+
 	}
 
 
