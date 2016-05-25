@@ -41,13 +41,13 @@ int draw_lasers(osg::ref_ptr<osg::Node> model, Configuration params)
 	root->addChild(bundleNode.get());			//verso il meno
 	root->addChild(bundle2Node.get());		//verso il più
 	
-	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
+	float laserX = cameraX, laserY = cameraY + params.baseline, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);					//punto di partenza del laser
 	float centerX = laserX;
 	float centerY = laserY - params.laserLength*cos(deg2rad*(params.alphaLaser));
 	float centerZ = laserZ - params.laserLength*sin(deg2rad*(params.alphaLaser));
 
-	float laser2X = cameraX, laser2Y = cameraY - params.laserDistance, laser2Z = cameraZ;
+	float laser2X = cameraX, laser2Y = cameraY - params.baseline, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	float center2X = laser2X;
 	float center2Y = laser2Y + params.laserLength*cos(deg2rad*(params.alphaLaser));

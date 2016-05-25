@@ -1,7 +1,5 @@
-//#include "stdafx.h"
 
 #include "laser_scanner.h"
-
 #include <osgDB/ReadFile>
 
 #include <osgUtil/Optimizer>
@@ -12,140 +10,94 @@
 
 #include <pcl/visualization/pcl_visualizer.h>	
 
+
 int _waitKey() {
 
-	#ifdef _WIN32
-		system("pause");
-	#elif linux 
-		system("read");
-	#endif
-		
-	return 0; 
+#ifdef _WIN32
+	system("pause");
+#elif linux 
+	system("read");
+#endif
+
+	return 0;
 }
 
 int main(int argc, char** argv)
-{	
-	// lettura dei dati di configurazione
+{
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Loading configuration parameters
 	Configuration confData;
 	read_config(confData);
 	double deg2rad = 2 * 3.1416 / 360;
-	// Caricamento del modello
-	std::cout << "Caricamento del modello \"" << confData.modelName << "\"...";
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Loading STL
+	std::cout << "Loading model \"" << confData.modelName << "\"...";
 	osg::ref_ptr<osg::Node> model = osgDB::readNodeFile(confData.modelName);
 	if (!model)
 	{
-		std::cout << "Nessun modello trovato con quel nome." << std::endl;
+		std::cout << "No model found with this name." << std::endl;
 		_waitKey();
 		return 1;
 	}
 	std::cout << " OK" << std::endl;
 
-	// Ottimizzazione della mesh
+	// Mesh optimization
 	osgUtil::Optimizer optimizer;
 	optimizer.optimize(model.get());
 
-	// Calcolo delle dimensioni della mesh 
+	// Mesh dimensions calculation
 	osg::ComputeBoundsVisitor cbbv;
 	model->accept(cbbv);
 	osg::BoundingBox bb = cbbv.getBoundingBox();
 	osg::Vec3 modelSize = bb._max - bb._min;
 
-	std::cout << "Dimensioni del modello:" << std::endl;
+	std::cout << "Model dimensions:" << std::endl;
 	std::cout << "  x_min: " << bb.xMin() << "\tx_max: " << bb.xMax() << "\t\tx: " << modelSize[0] << "mm" << std::endl;
 	std::cout << "  y_min: " << bb.yMin() << "\t\ty_max: " << bb.yMax() << "\t\ty: " << modelSize[1] << "mm" << std::endl;
 	std::cout << "  z_min: " << bb.zMin() << "\t\tz_max: " << bb.zMax() << "\t\tz: " << modelSize[2] << "mm" << std::endl;
 
-	if (!confData.useBounds) {	//calcolo bound ottimale per scansionare l'intero oggetto
-			confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.laserDistance;
-			confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.laserDistance;
+	// It's possible to configure the first and last position of the scan. If they are not defined, the entire mesh will be scanned
+	if (!confData.useBounds) {	
+		confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.baseline;
+		confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.baseline;
 	}
 
-	confData.laserLength = confData.cameraHeight/sin(confData.alphaLaser);			//non è esattamente giusto ma boh, i conti son quelli
-	//std::cout<<"lenght " <<confData.laserLength<<std::endl;
-	//std::cout<<"height " <<confData.cameraHeight<<std::endl;
-	
-	//Ottimizzazione apertura del laser
-	std::cout << "Calcolare l'apertura dei laser ottimale? (s/n) "<<std::flush;
-	while(true) {
-		char answer;
-		std::cin >> answer;
-		if (answer == 's' || answer == 'S') {
-				float central_length = (confData.cameraHeight-modelSize[2])/sin(deg2rad*confData.alphaLaser);
-				confData.fanLaser = 2*atan((modelSize[0]/2)/central_length)/deg2rad;
-			break;
-		}
-		
-		else if (answer == 'n' || answer == 'N') {
-				break;
-			}
-		std::cin.clear();
-		std::cin.ignore(std::cin.rdbuf()->in_avail());
-		std::cout<<"Input non valido. Reinserire.\nCalcolare l'apertura dei laser ottimale? (s/n) "<<std::endl;	
-	}
+	confData.laserLength = confData.cameraHeight / sin(deg2rad*confData.alphaLaser);														
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Configuration phase (will override conf file loaded data)
 
 	bool isConfigOK = false;
-	
-	while(!isConfigOK) {
-
-		//impostazione posizione iniziale della telecamera
-		confData.cameraPos[0] = (bb.xMax() + bb.xMin())/2;
+	while (!isConfigOK) {
+		confData.cameraPos[0] = (bb.xMax() + bb.xMin()) / 2;
 		confData.cameraPos[1] = confData.minY;
 		confData.cameraPos[2] = bb.zMin() + confData.cameraHeight;
-		
-		if (confData.fanLaser > 45) {
-			cout << "ATTENZIONE: l'apertura del fascio laser necessaria a coprire l'intero modello\n";
-			cout << "^^^^^^^^^^  supera il valore massimo, aumentare l'altezza del sistema telecamera/laser"<<std::flush;
-			//editconfig
-			isConfigOK = false;
-			edit_conf(confData);
-			std::cin.clear();
-			std::cin.ignore(std::cin.rdbuf()->in_avail());
+
+		if (!confData.useBounds) {	
+		confData.minY = bb.yMin() - confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) + confData.baseline;
+		confData.maxY = bb.yMax() + confData.cameraHeight*tan(deg2rad*(90 - confData.alphaLaser)) - confData.baseline;
 		}
 
-		// Calcolo l'altezza del punto di intersezione dei piani laser. 
-		float z_intersection = confData.cameraPos[2] - confData.laserDistance*tan(deg2rad*confData.alphaLaser);
-		if (z_intersection <= bb.zMax()) {
-			std::cout << "ATTENZIONE: l'altezza dei punti di intersezione tra i due piani laser " << std::endl;
-			std::cout << "^^^^^^^^^^  e' inferiore all'altezza massima del modello caricato." << std::endl;
-			std::cout << "^^^^^^^^^^  e' consigliato alzare l'altezza del sistema telecamera/laser di almeno " 
-						<< ceil(bb.zMax() - z_intersection) << "mm." << std::endl<<std::flush;
 
-			std::cout << "Procedere comunque? (s/n) ";
-			char answer;
-			while(true) {
+		// height of intersection of the planes
+		float z_intersection = confData.cameraPos[2] - confData.baseline*tan(deg2rad*confData.alphaLaser);
+		if (z_intersection <= bb.zMax()) {
+			std::cout << "WARNING: the height of the intersecition between the lasers is  " << std::endl;
+			std::cout << "^^^^^^^  less then the loaded model height." << std::endl;
+			std::cout << "^^^^^^^  It's recommended to raise the camera/laser position at least of "
+				<< ceil(bb.zMax() - z_intersection) << "mm." << std::endl << std::flush;
+
+			std::cout << "Continue anyway? (y/n) ";
+			std::string answer;
+			while (true) {
 				std::cin >> answer;
-				if (answer == 's' || answer == 'S') {
-					std::cout << "La scansione viene eseguita ignorando il suggerimento.\n";
+				if (answer == "y" || answer == "Y") {
+					std::cout << "Scan will be compleated ignoring the suggestion.\n";
 					break;
 				}
-				
-				else if (answer == 'n' || answer == 'N') {
-						//editconfig
-						isConfigOK = false;
-						edit_conf(confData);
-						std::cin.clear();
-						std::cin.ignore(std::cin.rdbuf()->in_avail());
-						break;
-					}
-			std::cin.clear();
-			std::cin.ignore(std::cin.rdbuf()->in_avail());
-			std::cout<<"Input non valido. Reinserire.\nProcedere comunque? (s/n) "<<std::endl;
-			}
-		}
 
-		std::cout<<"Visualizzazione scena attuale (la posizione dei laser è quella iniziale)\n";
-		draw_lasers(model, confData);
-
-		std::cout<<"Eseguire la scansione? (s/n) ";
-		while(true) {
-			char answer;
-			std::cin >> answer;
-			if (answer == 's' || answer == 'S') {
-				isConfigOK = true;
-				break;
-			}
-
-			else if (answer == 'n' || answer == 'N') {
+				else if (answer == "n" || answer == "N") {
 					//editconfig
 					isConfigOK = false;
 					edit_conf(confData);
@@ -153,90 +105,125 @@ int main(int argc, char** argv)
 					std::cin.ignore(std::cin.rdbuf()->in_avail());
 					break;
 				}
-		std::cin.clear();
-		std::cin.ignore(std::cin.rdbuf()->in_avail());
-		std::cout<<"Input non valido. Reinserire.\nEseguire la scansione? (s/n) "<<std::endl;
+				std::cin.clear();
+				std::cin.ignore(std::cin.rdbuf()->in_avail());
+				std::cout << "Input not valid. Retry.\nContinue anyway? (y/n)" << std::endl;
+			}
 		}
-			
+
+		std::cout << "\nVisualizing actual scene (laser sources located at start position)\n\n";
+		draw_lasers(model, confData);
+	
+		std::cout << "Actual configuration parameters: \n";
+		std::cout << "Camera/Laser height: " << confData.cameraHeight << "mm"<< std::endl;
+		std::cout << "Baseline: " << confData.baseline << "mm" << std::endl;
+		std::cout << "Angle from XY plane: " << confData.alphaLaser << "degrees"<< std::endl;
+		std::cout << "Y position at start: " << confData.minY << "mm" << std::endl;
+		std::cout << "Y position at the end: " << confData.maxY << "mm" << std::endl;
+		std::cout << "Intersection method used: " ;
+		if (confData.useMoller)
+			std::cout << "Moller-Trumbore\n" << std::endl;
+		else
+			std::cout << "Naive - OSG \n" << std::endl;
+	
+		std::cout << "Scan the scene with these values?" << std::endl;
+		std::cout << "Otherwise, it's possible to manually modify them." << std::endl;
+		std::cout << "Press (Y) to begin the scan, (N) to enter the configuration menu. " << std::endl;
+		while (true) {
+			std::string answer;
+			std::cin >> answer;
+			if (answer == "y" || answer == "Y") {
+				isConfigOK = true;
+				break;
+			}
+
+			else if (answer == "n" || answer == "N") {
+				//editconfig
+				isConfigOK = false;
+				edit_conf(confData);
+				std::cin.clear();
+				std::cin.ignore(std::cin.rdbuf()->in_avail());
+				break;
+			}
+			std::cin.clear();
+			std::cin.ignore(100,'\n');
+			std::cout << "Input not valid. Retry.\nPress (Y) to begin the scan, (N) to enter the configuration menu. " << std::endl;
+		}
+
 	}
-	//////////////////////////////////////////////////////////////
-	// Ottenimento piani laser. Nel sistema di riferimento della telecamera, i piani non cambiano mai equazione 
-	// e possono quindi essere calcolati solo una volta
 
-	// Tre punti per piano laser
-	osg::Vec3 a1(0,	confData.laserDistance,	0 );
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	osg::Vec3 a2(0,		
-		confData.laserDistance - confData.laserLength*cos(deg2rad*(confData.alphaLaser)),	
-		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
-
-	osg::Vec3 a3(100,
-		confData.laserDistance - confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
-		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
-
-
-	osg::Vec3 b1(0,	-confData.laserDistance, 0);
-
-	osg::Vec3 b2(0,
-		-confData.laserDistance + confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
-		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
-
-	osg::Vec3 b3(100,
-		-confData.laserDistance + confData.laserLength*cos(deg2rad*(confData.alphaLaser)),
-		-confData.laserLength*sin(deg2rad*(confData.alphaLaser)));
-
-	osg::Plane planeA(a1, a2, a3);
-	osg::Plane planeB(b1, b2, b3);
-	
-	// Ottenimento dei coefficienti delle equazioni dei piani laser
-	osg::Vec4d planeA_coeffs = planeA.asVec4();
-	osg::Vec4d planeB_coeffs = planeB.asVec4();
-	
-	std::cout<<"Coefficienti piani: "<<planeA_coeffs[0]<<" "<<planeA_coeffs[1]<<" "<<planeA_coeffs[2]<<" "<<planeA_coeffs[3]<<"\n";
-	std::cout<<"Coefficienti piani: "<<planeB_coeffs[0]<<" "<<planeB_coeffs[1]<<" "<<planeB_coeffs[2]<<" "<<planeB_coeffs[3]<<"\n";
-
-	//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	// Fase iterativa. Per ogni frame viene scansionata l'immagine e inseriti i punti nella PC
-
-	// Inizializzazione delle variabili necessarie per la visualizzazione della progressione
+	// Initialization of variables used for progress count
 	float iter = 0;
 	float total_space = confData.maxY - confData.minY;
-	float space_between_frame = confData.scanSpeed/confData.fpsCam; // in millimetri
-	float num_iterations = ceil(total_space / space_between_frame);
+	float space_between_frame = confData.scanSpeed / confData.fpsCam; // in millimetri
+	int num_iterations = ceil(total_space / space_between_frame);
 
-	// Inizializzazione point cloud da riempire
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	// Equation of the laser plane
+	float planeA[4];
+	float planeB[4];
+
+	calculatePlan(confData, planeA, planeB);
+	/*
+	OpenCLparam CLparam;
+	init_moller(confData, CLparam);
+	*/
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	// Iterative phase. For every frame, an image will be scanned and used to extract point XYZ coordinates
+
+	// PointCloud to fill
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-
-	//std::cout << "cameraPos " << confData.cameraPos[0] <<" " << confData.cameraPos[1] << " " << confData.cameraPos[2]<<std::endl;
 
 	for (float cameraY = confData.minY; cameraY <= confData.maxY; cameraY += space_between_frame) {
 
 		confData.cameraPos[1] = cameraY;
-		//std::cout << "cameraPos " << confData.cameraPos[0] <<" " << confData.cameraPos[1] << " " << confData.cameraPos[2]<<std::endl;
 
-		// Istruzioni per l'aggiornamento dello stato su console
+		// Progress on console
 		float progress = iter++ / num_iterations * 100;
 		printf("\rScansionando la posizione y=%2.2f. Completamento al %2.2f%% ", cameraY, progress);
-		std::cout<<std::flush;
+		std::cout << std::flush;
 
-		// Chiamata al metodo per ottenere le catture della macchina fotografica.
-		cv::Mat screenshot = reproject(model, confData);
+		// Scan the scene
+		cv::Mat screenshot;
+		/*
+		if (confData.useMoller) 
+			screenshot = reprojectMoller(CLparam, confData, numPolygon, numDirections, cameraY);
+		else
+			*/
+			screenshot = reproject(model, confData);
+		// Convert to 3D points
+		convert_to_3d(screenshot, confData, planeA, planeB, cloud);
 
-		// Conversione dall'immagine allo spazio 3D
-		convert_to_3d(screenshot, confData, planeA_coeffs, planeB_coeffs, cloud);
-	
 	}
 
-	// Visualizzazione finale della point cloud
-	std::cout << "\nPunti nella cloud " << cloud->points.size() << std::endl;
+	// Visualization
+	std::cout << "\npoint in cloud " << cloud->points.size() << std::endl;
 	pcl::visualization::PCLVisualizer pcl_viewer("PCL Viewer");
 	pcl_viewer.addCoordinateSystem(0.1);
 	pcl_viewer.addPointCloud<pcl::PointXYZ>(cloud, "input_cloud");
 	pcl_viewer.setBackgroundColor(0.2, 0.2, 0.2);
 	pcl_viewer.spin();
+	pcl_viewer.close();
 
-	cout << "Exit program." << endl;
+	std::string answer;
+	while (true) {
+		std::cout << "Save this configuration for further scan? (Y/N) ";
+		std::cin >> answer;
+		if (answer == "y" || answer == "Y") {
+			save_config(confData);
+			break;
+		}
+		if (answer == "n" || answer == "N") {
+			std::cout << "Configuration not saved. " << std::endl;
+			break;
+		}
+		std::cout << "Input not valid! Please type Y or N " << std::endl;
+	}
+
 	//_waitKey();
 
 	return 0;

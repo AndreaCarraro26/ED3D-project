@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
+
 <opencv_storage>
-	<model> ../data/bin1.stl </model>
+	<model> ../data/prodotto.stl </model>
 	<cameraHeight> 3200 </cameraHeight>
 	<laserLength> 6000 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
-	<laserDistance> 800 </laserDistance>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
-	<numLaser> 50	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<baseline> 800 </baseline>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
+	<numLaser> 100	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<moller> 0 </moller>
 	
 	<useBounds> 1 </useBounds>		<!-- Usa i limiti definiti sotto, altrimenti scansiona tutto il modello -->
 	<minY>-200</minY>			

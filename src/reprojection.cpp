@@ -76,7 +76,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	std::vector<cv::Vec3f> intersection_points;
 
 	// definizione del punto di applicazione del fascio
-	float laserX = cameraX, laserY = cameraY + params.laserDistance, laserZ = cameraZ;
+	float laserX = cameraX, laserY = cameraY + params.baseline, laserZ = cameraZ;
 	osg::Vec3 source(laserX, laserY, laserZ);
 
 	// definizione del punto di arrivo del raggio centrale
@@ -86,7 +86,7 @@ cv::Mat reproject(osg::ref_ptr<osg::Node> model, Configuration params)	{
 	osg::Vec3 center(centerX, centerY, centerZ);
 
 	// stesso procedimento gi� visto, applicato al secondo laser
-	float laser2X = cameraX, laser2Y = cameraY - params.laserDistance, laser2Z = cameraZ;
+	float laser2X = cameraX, laser2Y = cameraY - params.baseline, laser2Z = cameraZ;
 	osg::Vec3 source2(laser2X, laser2Y, laser2Z);						//punto di partenza del secondo laser
 	
 	float center2X = laser2X;

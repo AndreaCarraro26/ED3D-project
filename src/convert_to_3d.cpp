@@ -8,7 +8,7 @@
 #include <pcl/point_types.h>									
 #include <pcl/point_cloud.h>
 
-void convert_to_3d(cv::Mat image, Configuration params, osg::Vec4d planeA_coeff, osg::Vec4d planeB_coeff, 
+void convert_to_3d(cv::Mat image, Configuration params, float planeA_coeff[4], float planeB_coeff[4], 
 					pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
 
