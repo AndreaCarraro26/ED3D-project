@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+
+<opencv_storage>
+	<model> ../data/prodotto.stl </model>
+	<cameraHeight> 3200 </cameraHeight>
+	<laserLength> 6000 </laserLength>	<!-- Lunghezza dei segmenti che compongono il laser, necessari per la simulazione -->
+	<baseline> 800 </baseline>	<!-- Distanza del laser dalla camera. Da 500 a 800mm -->
+	<numLaser> 100	 </numLaser>	<!-- Numero di linee che compongono il fascio -->
+	<moller> 1 </moller>
+	
+	<useBounds> 1 </useBounds>		<!-- Usa i limiti definiti sotto, altrimenti scansiona tutto il modello -->
+	<minY>-200</minY>			
+	<maxY>200</maxY>
+	
+	<scanSpeed>1000 </scanSpeed>	<!-- Valori 100 mm/s – 1000 mm/s -->
+	<fpsCam> 100 </fpsCam>	<!-- Valori 100 fps – 500 fps -->
+	<alphaLaser> 70 </alphaLaser>	<!-- Valori 60° - 70° -->
+	<fanLaser> 30 </fanLaser>	<!-- Valori 30° - 45° -->
+	
+	<!-- Dati del sensore della camera-->
+	<sensor_width>2024</sensor_width>			<!-- Altezza in pixel della telegamera-->
+	<sensor_height> 1088 </sensor_height>		<!-- Larghezza in pixel della telegamera-->
+
+	<sensor_f_x>4615.04</sensor_f_x>			<!-- 							-->
+	<sensor_f_y> 4615.51</sensor_f_y>			<!-- Parametri della			-->
+	<sensor_x_0>1113.41</sensor_x_0>			<!-- matrice degli intrinseci	-->
+	<sensor_y_0>480.016</sensor_y_0>			<!-- 							-->
+
+	
+	<roi_height> 500 </roi_height>
+	<roi_y_1> 0 </roi_y_1> 
+	<roi_y_2> 588 </roi_y_2>
+	
+</opencv_storage>
